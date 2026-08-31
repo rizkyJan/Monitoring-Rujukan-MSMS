@@ -21,7 +21,10 @@ const state = {
   formMode: 'create',
   editingItem: null,
   formSnapshot: null,
-  formSaving: false
+  formSaving: false,
+
+  currentFilterMeta: null,
+  createPreviewToken: 0
 };
 
 
@@ -335,6 +338,13 @@ async function loadFilterOptions_() {
   const doctorOptions = filters.dokter || [];
   const formDoctorOptions = filters.dokterForm || doctorOptions;
 
+  state.currentFilterMeta = {
+    period,
+    nextNo: Number(filters.nextNo || 1),
+    nextNoHarian: Number(filters.nextNoHarian || 1),
+    dokterForm: formDoctorOptions
+  };
+
   UI.fillSelect(
     elements.doctor,
     doctorOptions,
@@ -624,6 +634,15 @@ function bindEvents() {
     submitForm_
   );
 
+  elements.formTanggal.addEventListener(
+    'change',
+    () => {
+      if (state.formMode === 'create') {
+        updateCreateContextFromDate_();
+      }
+    }
+  );
+
   document.addEventListener(
     'keydown',
     event => {
@@ -700,6 +719,125 @@ function closeDetail_() {
 }
 
 
+const CLIENT_MONTH_NAMES_ = [
+  'JANUARI',
+  'FEBRUARI',
+  'MARET',
+  'APRIL',
+  'MEI',
+  'JUNI',
+  'JULI',
+  'AGUSTUS',
+  'SEPTEMBER',
+  'OKTOBER',
+  'NOVEMBER',
+  'DESEMBER'
+];
+
+
+function periodFromInputDate_(value) {
+  const clean = String(value || '').trim();
+  const match = clean.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+
+  if (!match) {
+    return '';
+  }
+
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+
+  if (month < 1 || month > 12) {
+    return '';
+  }
+
+  return `${CLIENT_MONTH_NAMES_[month - 1]} ${year}`;
+}
+
+
+async function updateCreateContextFromDate_() {
+  const targetPeriod = periodFromInputDate_(
+    elements.formTanggal.value
+  );
+
+  if (!targetPeriod) {
+    elements.formPeriodLabel.textContent =
+      'Ditentukan otomatis dari tanggal';
+    elements.formNo.value = '';
+    elements.formNoHarian.value = '';
+    return;
+  }
+
+  const previewToken = ++state.createPreviewToken;
+  const periodExists = state.periods.includes(targetPeriod);
+
+  elements.formPeriodLabel.textContent =
+    periodExists
+      ? targetPeriod
+      : `${targetPeriod} · sheet akan dibuat saat Simpan`;
+
+  if (!periodExists) {
+    /**
+     * Sheet baru masih kosong, sehingga nomor pertama = 1.
+     * Backend tetap menghitung ulang pada saat Simpan.
+     */
+    elements.formNo.value = '1';
+    elements.formNoHarian.value = '1';
+    return;
+  }
+
+  try {
+    const params = new URLSearchParams({
+      period: targetPeriod
+    });
+
+    const payload = await apiFetch_(
+      '/filters?' + params.toString()
+    );
+
+    if (previewToken !== state.createPreviewToken) {
+      return;
+    }
+
+    const filters = payload.data || {};
+
+    elements.formNo.value =
+      String(filters.nextNo || 1);
+
+    elements.formNoHarian.value =
+      String(filters.nextNoHarian || 1);
+
+    /**
+     * Dokter mengikuti dropdown sheet periode tujuan.
+     */
+    const options =
+      filters.dokterForm ||
+      filters.dokter ||
+      [];
+
+    const selectedDoctor =
+      elements.formDokter.value;
+
+    UI.fillSelect(
+      elements.formDokter,
+      options,
+      '- Pilih Dokter -'
+    );
+
+    ensureDoctorOption_(selectedDoctor);
+    elements.formDokter.value = selectedDoctor;
+
+  } catch (error) {
+    elements.formNo.value = '';
+    elements.formNoHarian.value = '';
+
+    showFormError_(
+      error?.message ||
+      'Gagal membaca nomor otomatis periode tujuan.'
+    );
+  }
+}
+
+
 function openCreateForm_() {
   if (!canWrite_() || !state.permissions.create) {
     showToast_('Akun ini tidak memiliki akses tambah.', 'error');
@@ -714,15 +852,19 @@ function openCreateForm_() {
 
   elements.formModalKicker.textContent = 'Akses ERM';
   elements.formModalTitle.textContent = 'Tambah Rujukan';
-  elements.formPeriodLabel.textContent = elements.period.value || '-';
+  elements.formPeriodLabel.textContent =
+    'Ditentukan otomatis dari tanggal';
   elements.formRowWrap.hidden = true;
   elements.formSubmit.textContent = 'Simpan Data';
+
+  elements.formNo.value = '';
+  elements.formNoHarian.value = '';
 
   clearFormError_();
   elements.formModal.hidden = false;
   document.body.style.overflow = 'hidden';
 
-  elements.formNama.focus();
+  elements.formTanggal.focus();
 }
 
 
@@ -780,6 +922,9 @@ async function openEditForm_(row) {
 
 function resetFormFields_() {
   elements.form.reset();
+  state.createPreviewToken += 1;
+  elements.formNo.value = '';
+  elements.formNoHarian.value = '';
   ensureStatusOption_('');
 }
 
@@ -852,8 +997,6 @@ function collectFormData_() {
   return {
     tanggal: elements.formTanggal.value.trim(),
     dokter: elements.formDokter.value.trim(),
-    no: elements.formNo.value.trim(),
-    noHarian: elements.formNoHarian.value.trim(),
     nama: elements.formNama.value.trim(),
     bpjs: elements.formBpjs.value.trim(),
     kontrol: elements.formKontrol.value.trim(),
@@ -895,6 +1038,14 @@ async function submitForm_(event) {
 
   const data = collectFormData_();
 
+  if (!data.tanggal) {
+    showFormError_(
+      'Tanggal wajib diisi. Periode sheet akan ditentukan otomatis dari tanggal.'
+    );
+    elements.formTanggal.focus();
+    return;
+  }
+
   if (!data.nama) {
     showFormError_('Nama pasien wajib diisi.');
     elements.formNama.focus();
@@ -918,16 +1069,38 @@ async function submitForm_(event) {
         {
           method: 'POST',
           body: {
-            period: elements.period.value,
             data
           }
         }
       );
 
+      const createdPeriod = String(
+        payload.period || ''
+      ).trim();
+
+      /**
+       * Jika tanggal menghasilkan periode lain (mis. 01/09/2026),
+       * pilih otomatis periode tersebut setelah data tersimpan.
+       */
+      if (createdPeriod) {
+        await loadPeriods_();
+
+        const exists = Array.from(elements.period.options)
+          .some(option => option.value === createdPeriod);
+
+        if (exists) {
+          elements.period.value = createdPeriod;
+          state.page = 1;
+        }
+      }
+
       closeForm_(true);
       showToast_(
         payload.message ||
-        `Data berhasil ditambahkan pada row ${payload.data?.row || '-'}.`,
+        (
+          `Data berhasil ditambahkan. ` +
+          `No ${payload.no || '-'} · No. Harian ${payload.noHarian || '-'}.`
+        ),
         'success'
       );
 
