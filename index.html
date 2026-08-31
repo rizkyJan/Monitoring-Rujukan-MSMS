@@ -171,15 +171,26 @@
               <p id="resultInfo">Memuat data...</p>
             </div>
 
-            <label class="page-size">
-              <span>Tampilkan</span>
+            <div class="table-toolbar-actions">
+              <button
+                class="btn btn-primary"
+                id="addButton"
+                type="button"
+                hidden
+              >
+                + Tambah Rujukan
+              </button>
 
-              <select id="pageSize">
-                <option value="10">10</option>
-                <option value="25" selected>25</option>
-                <option value="50">50</option>
-              </select>
-            </label>
+              <label class="page-size">
+                <span>Tampilkan</span>
+
+                <select id="pageSize">
+                  <option value="10">10</option>
+                  <option value="25" selected>25</option>
+                  <option value="50">50</option>
+                </select>
+              </label>
+            </div>
 
           </div>
 
@@ -225,7 +236,7 @@
                   <th>DX</th>
                   <th>RS Tujuan</th>
                   <th>Poli</th>
-                  <th></th>
+                  <th>Aksi</th>
                 </tr>
               </thead>
 
@@ -279,6 +290,7 @@
   </div>
 
 
+  <!-- DETAIL -->
   <div
     class="modal-backdrop"
     id="detailModal"
@@ -316,6 +328,153 @@
 
     </div>
   </div>
+
+
+  <!-- CREATE / EDIT ERM -->
+  <div
+    class="modal-backdrop"
+    id="formModal"
+    hidden
+  >
+    <div
+      class="modal form-modal"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="formModalTitle"
+    >
+
+      <div class="modal-header">
+        <div>
+          <small id="formModalKicker">Akses ERM</small>
+          <h3 id="formModalTitle">Tambah Rujukan</h3>
+          <p class="form-context">
+            Periode: <strong id="formPeriodLabel">-</strong>
+            <span id="formRowWrap" hidden>
+              · Row: <strong id="formRowLabel">-</strong>
+            </span>
+          </p>
+        </div>
+
+        <button
+          type="button"
+          class="modal-close"
+          id="formModalClose"
+          aria-label="Tutup"
+        >
+          ×
+        </button>
+      </div>
+
+      <form id="rujukanForm" novalidate>
+        <div class="form-grid">
+
+          <label class="field">
+            <span>Tanggal</span>
+            <input id="formTanggal" type="date">
+          </label>
+
+          <label class="field">
+            <span>Dokter</span>
+            <input id="formDokter" type="text" maxlength="150" autocomplete="off">
+          </label>
+
+          <label class="field">
+            <span>No</span>
+            <input id="formNo" type="text" maxlength="80" autocomplete="off">
+          </label>
+
+          <label class="field">
+            <span>No. Harian</span>
+            <input id="formNoHarian" type="text" maxlength="80" autocomplete="off">
+          </label>
+
+          <label class="field form-span-2">
+            <span>Nama Pasien *</span>
+            <input id="formNama" type="text" maxlength="200" autocomplete="off" required>
+          </label>
+
+          <label class="field">
+            <span>BPJS No.</span>
+            <input
+              id="formBpjs"
+              type="text"
+              maxlength="80"
+              inputmode="numeric"
+              autocomplete="off"
+            >
+          </label>
+
+          <label class="field">
+            <span>Status</span>
+            <select id="formKontrol">
+              <option value="">- Pilih -</option>
+              <option value="BARU">BARU</option>
+              <option value="KONTROL">KONTROL</option>
+            </select>
+          </label>
+
+          <label class="field form-span-2">
+            <span>Diagnosis / DX</span>
+            <textarea id="formDx" rows="3" maxlength="2000"></textarea>
+          </label>
+
+          <label class="field">
+            <span>RS Tujuan</span>
+            <input id="formRsTujuan" type="text" maxlength="300" autocomplete="off">
+          </label>
+
+          <label class="field">
+            <span>Poli Tujuan</span>
+            <input id="formPoliTujuan" type="text" maxlength="300" autocomplete="off">
+          </label>
+
+          <label class="field form-span-2">
+            <span>Keterangan</span>
+            <textarea id="formKeterangan" rows="3" maxlength="3000"></textarea>
+          </label>
+
+          <label class="field form-span-2">
+            <span>Pemberat TACC</span>
+            <textarea id="formPemberatTacc" rows="3" maxlength="3000"></textarea>
+          </label>
+
+        </div>
+
+        <div
+          class="form-error"
+          id="formError"
+          hidden
+        ></div>
+
+        <div class="modal-footer">
+          <button
+            type="button"
+            class="btn btn-secondary"
+            id="formCancelButton"
+          >
+            Batal
+          </button>
+
+          <button
+            type="submit"
+            class="btn btn-primary"
+            id="formSubmitButton"
+          >
+            Simpan Data
+          </button>
+        </div>
+      </form>
+
+    </div>
+  </div>
+
+
+  <div
+    class="toast-container"
+    id="toastContainer"
+    aria-live="polite"
+    aria-atomic="true"
+  ></div>
 
 
   <script src="assets/js/config.js"></script>

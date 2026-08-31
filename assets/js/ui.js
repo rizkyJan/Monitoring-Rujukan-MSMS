@@ -47,7 +47,7 @@ const UI = {
         .join('');
   },
 
-  rowHtml(item, index) {
+  rowHtml(item, index, canEdit) {
     return `
       <tr>
         <td>${this.escapeHtml(item.tanggal)}</td>
@@ -63,19 +63,31 @@ const UI = {
         <td class="rs-cell">${this.escapeHtml(item.rsTujuan)}</td>
         <td>${this.escapeHtml(item.poliTujuan)}</td>
         <td>
-          <button
-            class="detail-button"
-            type="button"
-            data-detail-index="${index}"
-          >
-            Detail
-          </button>
+          <div class="row-actions">
+            <button
+              class="detail-button"
+              type="button"
+              data-detail-index="${index}"
+            >
+              Detail
+            </button>
+
+            ${canEdit ? `
+              <button
+                class="edit-button"
+                type="button"
+                data-edit-row="${this.escapeHtml(item.row)}"
+              >
+                Edit
+              </button>
+            ` : ''}
+          </div>
         </td>
       </tr>
     `;
   },
 
-  mobileCardHtml(item, index) {
+  mobileCardHtml(item, index, canEdit) {
     return `
       <article class="mobile-card">
 
@@ -117,13 +129,25 @@ const UI = {
 
         </div>
 
-        <button
-          class="detail-button"
-          type="button"
-          data-detail-index="${index}"
-        >
-          Lihat Detail
-        </button>
+        <div class="mobile-action-row">
+          <button
+            class="detail-button"
+            type="button"
+            data-detail-index="${index}"
+          >
+            Lihat Detail
+          </button>
+
+          ${canEdit ? `
+            <button
+              class="edit-button"
+              type="button"
+              data-edit-row="${this.escapeHtml(item.row)}"
+            >
+              Edit
+            </button>
+          ` : ''}
+        </div>
 
       </article>
     `;
