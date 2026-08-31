@@ -31,206 +31,246 @@
         </div>
       </div>
 
-      <div class="mode-badge">
-        MODE DEMO
+      <div class="user-area">
+        <div class="user-meta" id="userMeta">
+          <strong id="userRole">MEMUAT...</strong>
+          <small id="userEmail"></small>
+        </div>
+
+        <div
+          class="mode-badge"
+          id="modeBadge"
+        >
+          SECURE
+        </div>
       </div>
     </header>
 
 
     <main class="main-content">
 
-      <section class="stats-grid">
-
-        <article class="stat-card">
-          <span class="stat-label">Total Data</span>
-          <strong id="statTotal">0</strong>
-          <small>Rujukan periode aktif</small>
-        </article>
-
-        <article class="stat-card">
-          <span class="stat-label">Baru</span>
-          <strong id="statBaru">0</strong>
-          <small>Rujukan baru</small>
-        </article>
-
-        <article class="stat-card">
-          <span class="stat-label">Kontrol</span>
-          <strong id="statKontrol">0</strong>
-          <small>Rujukan kontrol</small>
-        </article>
-
-        <article class="stat-card">
-          <span class="stat-label">Rumah Sakit</span>
-          <strong id="statRs">0</strong>
-          <small>RS tujuan aktif</small>
-        </article>
-
+      <section
+        class="secure-message"
+        id="secureMessage"
+        hidden
+      >
+        <strong>Akses melalui domain aman diperlukan.</strong>
+        <p>
+          Buka aplikasi melalui custom domain yang dilindungi Cloudflare Access.
+        </p>
       </section>
 
 
-      <section class="panel">
+      <section id="appContent">
 
-        <div class="panel-heading">
-          <div>
-            <h2>Filter Data</h2>
-            <p>Cari data tanpa membuka Spreadsheet langsung.</p>
-          </div>
+        <section class="stats-grid">
 
-          <button
-            class="btn btn-secondary"
-            id="resetButton"
-            type="button"
-          >
-            Reset Filter
-          </button>
-        </div>
+          <article class="stat-card">
+            <span class="stat-label">Total Data</span>
+            <strong id="statTotal">0</strong>
+            <small>Rujukan periode aktif</small>
+          </article>
+
+          <article class="stat-card">
+            <span class="stat-label">Baru</span>
+            <strong id="statBaru">0</strong>
+            <small>Rujukan baru</small>
+          </article>
+
+          <article class="stat-card">
+            <span class="stat-label">Kontrol</span>
+            <strong id="statKontrol">0</strong>
+            <small>Rujukan kontrol</small>
+          </article>
+
+          <article class="stat-card">
+            <span class="stat-label">Rumah Sakit</span>
+            <strong id="statRs">0</strong>
+            <small>RS tujuan aktif</small>
+          </article>
+
+        </section>
 
 
-        <div class="filter-grid">
+        <section class="panel">
 
-          <label class="field">
-            <span>Periode</span>
-            <select id="periodFilter"></select>
-          </label>
+          <div class="panel-heading">
+            <div>
+              <h2>Filter Data</h2>
+              <p>Cari data tanpa membuka Spreadsheet langsung.</p>
+            </div>
 
-          <label class="field field-search">
-            <span>Pencarian</span>
-            <input
-              id="searchInput"
-              type="search"
-              placeholder="Nama, BPJS, dokter, DX, RS..."
-              autocomplete="off"
+            <button
+              class="btn btn-secondary"
+              id="resetButton"
+              type="button"
             >
-          </label>
-
-          <label class="field">
-            <span>Dokter</span>
-            <select id="doctorFilter">
-              <option value="">Semua Dokter</option>
-            </select>
-          </label>
-
-          <label class="field">
-            <span>Status</span>
-            <select id="statusFilter">
-              <option value="">Semua Status</option>
-            </select>
-          </label>
-
-          <label class="field">
-            <span>RS Tujuan</span>
-            <select id="hospitalFilter">
-              <option value="">Semua RS</option>
-            </select>
-          </label>
-
-          <label class="field">
-            <span>Poli Tujuan</span>
-            <select id="clinicFilter">
-              <option value="">Semua Poli</option>
-            </select>
-          </label>
-
-        </div>
-
-      </section>
-
-
-      <section class="panel">
-
-        <div class="table-toolbar">
-
-          <div>
-            <h2>Data Rujukan</h2>
-            <p id="resultInfo">Memuat data...</p>
+              Reset Filter
+            </button>
           </div>
 
-          <label class="page-size">
-            <span>Tampilkan</span>
 
-            <select id="pageSize">
-              <option value="10">10</option>
-              <option value="25" selected>25</option>
-              <option value="50">50</option>
-            </select>
-          </label>
+          <div class="filter-grid">
 
-        </div>
+            <label class="field">
+              <span>Periode</span>
+              <select id="periodFilter">
+                <option value="">Memuat periode...</option>
+              </select>
+            </label>
 
+            <label class="field field-search">
+              <span>Pencarian</span>
+              <input
+                id="searchInput"
+                type="search"
+                placeholder="Nama, BPJS, dokter, DX, RS..."
+                autocomplete="off"
+              >
+            </label>
 
-        <div
-          id="loadingState"
-          class="state-box"
-          hidden
-        >
-          Memuat data...
-        </div>
+            <label class="field">
+              <span>Dokter</span>
+              <select id="doctorFilter">
+                <option value="">Semua Dokter</option>
+              </select>
+            </label>
 
+            <label class="field">
+              <span>Status</span>
+              <select id="statusFilter">
+                <option value="">Semua Status</option>
+              </select>
+            </label>
 
-        <div
-          id="emptyState"
-          class="state-box"
-          hidden
-        >
-          Data tidak ditemukan.
-        </div>
+            <label class="field">
+              <span>RS Tujuan</span>
+              <select id="hospitalFilter">
+                <option value="">Semua RS</option>
+              </select>
+            </label>
 
+            <label class="field">
+              <span>Poli Tujuan</span>
+              <select id="clinicFilter">
+                <option value="">Semua Poli</option>
+              </select>
+            </label>
 
-        <div
-          id="desktopTable"
-          class="table-wrapper"
-        >
+          </div>
 
-          <table>
-            <thead>
-              <tr>
-                <th>Tanggal</th>
-                <th>Dokter</th>
-                <th>Nama</th>
-                <th>BPJS No.</th>
-                <th>Status</th>
-                <th>DX</th>
-                <th>RS Tujuan</th>
-                <th>Poli</th>
-                <th></th>
-              </tr>
-            </thead>
-
-            <tbody id="tableBody"></tbody>
-          </table>
-
-        </div>
+        </section>
 
 
-        <div
-          id="mobileCards"
-          class="mobile-cards"
-        ></div>
+        <section class="panel">
+
+          <div class="table-toolbar">
+
+            <div>
+              <h2>Data Rujukan</h2>
+              <p id="resultInfo">Memuat data...</p>
+            </div>
+
+            <label class="page-size">
+              <span>Tampilkan</span>
+
+              <select id="pageSize">
+                <option value="10">10</option>
+                <option value="25" selected>25</option>
+                <option value="50">50</option>
+              </select>
+            </label>
+
+          </div>
 
 
-        <div class="pagination">
-
-          <button
-            type="button"
-            class="btn btn-secondary"
-            id="prevButton"
+          <div
+            id="loadingState"
+            class="state-box"
           >
-            ← Sebelumnya
-          </button>
+            Memuat data...
+          </div>
 
-          <span id="pageInfo">
-            Halaman 1
-          </span>
 
-          <button
-            type="button"
-            class="btn btn-secondary"
-            id="nextButton"
+          <div
+            id="emptyState"
+            class="state-box"
+            hidden
           >
-            Berikutnya →
-          </button>
+            Data tidak ditemukan.
+          </div>
 
-        </div>
+
+          <div
+            id="errorState"
+            class="state-box error-state"
+            hidden
+          ></div>
+
+
+          <div
+            id="desktopTable"
+            class="table-wrapper"
+            hidden
+          >
+
+            <table>
+              <thead>
+                <tr>
+                  <th>Tanggal</th>
+                  <th>Dokter</th>
+                  <th>Nama</th>
+                  <th>BPJS No.</th>
+                  <th>Status</th>
+                  <th>DX</th>
+                  <th>RS Tujuan</th>
+                  <th>Poli</th>
+                  <th></th>
+                </tr>
+              </thead>
+
+              <tbody id="tableBody"></tbody>
+            </table>
+
+          </div>
+
+
+          <div
+            id="mobileCards"
+            class="mobile-cards"
+            hidden
+          ></div>
+
+
+          <div
+            class="pagination"
+            id="pagination"
+            hidden
+          >
+
+            <button
+              type="button"
+              class="btn btn-secondary"
+              id="prevButton"
+            >
+              ← Sebelumnya
+            </button>
+
+            <span id="pageInfo">
+              Halaman 1
+            </span>
+
+            <button
+              type="button"
+              class="btn btn-secondary"
+              id="nextButton"
+            >
+              Berikutnya →
+            </button>
+
+          </div>
+
+        </section>
 
       </section>
 
