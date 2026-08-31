@@ -332,10 +332,20 @@ async function loadFilterOptions_() {
 
   const filters = payload.data || {};
 
+  const doctorOptions = filters.dokter || [];
+
   UI.fillSelect(
     elements.doctor,
-    filters.dokter || [],
+    doctorOptions,
     'Semua Dokter'
+  );
+
+  // Form Tambah/Edit memakai daftar dokter yang sama dengan
+  // dropdown dokter pada Spreadsheet/filter periode aktif.
+  UI.fillSelect(
+    elements.formDokter,
+    doctorOptions,
+    '- Pilih Dokter -'
   );
 
   UI.fillSelect(
@@ -777,7 +787,10 @@ function fillFormFromItem_(item) {
   resetFormFields_();
 
   elements.formTanggal.value = displayDateToInput_(item.tanggal);
+
+  ensureDoctorOption_(item.dokter || '');
   elements.formDokter.value = item.dokter || '';
+
   elements.formNo.value = item.no || '';
   elements.formNoHarian.value = item.noHarian || '';
   elements.formNama.value = item.nama || '';
@@ -791,6 +804,27 @@ function fillFormFromItem_(item) {
   elements.formPoliTujuan.value = item.poliTujuan || '';
   elements.formKeterangan.value = item.keterangan || '';
   elements.formPemberatTacc.value = item.pemberatTacc || '';
+}
+
+
+function ensureDoctorOption_(value) {
+  const clean = String(value || '').trim();
+
+  if (!clean) {
+    return;
+  }
+
+  const exists = Array.from(elements.formDokter.options)
+    .some(option => option.value === clean);
+
+  // Pengaman untuk data lama: jika suatu dokter lama belum masuk
+  // daftar filter periode, nilainya tetap dapat ditampilkan saat Edit.
+  if (!exists) {
+    const option = document.createElement('option');
+    option.value = clean;
+    option.textContent = clean;
+    elements.formDokter.appendChild(option);
+  }
 }
 
 
