@@ -787,7 +787,8 @@ async function updateCreateContextFromDate_() {
 
   try {
     const params = new URLSearchParams({
-      period: targetPeriod
+      period: targetPeriod,
+      tanggal: elements.formTanggal.value
     });
 
     const payload = await apiFetch_(
