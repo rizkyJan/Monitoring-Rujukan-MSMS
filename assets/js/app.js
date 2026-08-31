@@ -293,11 +293,42 @@ async function loadCurrentUser_() {
   if (canWrite_()) {
     elements.modeBadge.textContent = 'AKSES ERM';
     elements.modeBadge.classList.add('erm-mode');
-    elements.addButton.hidden = !state.permissions.create;
   } else {
     elements.modeBadge.textContent = 'READ ONLY';
     elements.modeBadge.classList.remove('erm-mode');
-    elements.addButton.hidden = true;
+  }
+
+  updateErmActionVisibility_();
+}
+
+
+/**
+ * ERM-only action harus benar-benar hilang untuk Viewer.
+ *
+ * Selain hidden attribute, display juga dipaksa agar tidak ada
+ * kemungkinan style/browser/cache lama membuat tombol tampil.
+ */
+function updateErmActionVisibility_() {
+  const canCreate =
+    canWrite_() &&
+    state.permissions.create;
+
+  if (elements.addButton) {
+    elements.addButton.hidden = !canCreate;
+    elements.addButton.setAttribute(
+      'aria-hidden',
+      canCreate ? 'false' : 'true'
+    );
+
+    if (canCreate) {
+      elements.addButton.style.removeProperty('display');
+    } else {
+      elements.addButton.style.setProperty(
+        'display',
+        'none',
+        'important'
+      );
+    }
   }
 }
 
