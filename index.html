@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>Monitoring Rujukan Mitra Sehat</title>
+
+  <meta
+    name="description"
+    content="Monitoring dan pencarian data rujukan Mitra Sehat"
+  >
+
+  <link
+    rel="stylesheet"
+    href="assets/css/style.css"
+  >
+</head>
+
+<body>
+
+  <div class="app-shell">
+
+    <header class="topbar">
+      <div class="brand-wrap">
+        <div class="brand-icon">MR</div>
+
+        <div>
+          <h1>Monitoring Rujukan Mitra Sehat</h1>
+          <p>Monitoring, pencarian, dan filter data rujukan</p>
+        </div>
+      </div>
+
+      <div class="mode-badge">
+        MODE DEMO
+      </div>
+    </header>
+
+
+    <main class="main-content">
+
+      <section class="stats-grid">
+
+        <article class="stat-card">
+          <span class="stat-label">Total Data</span>
+          <strong id="statTotal">0</strong>
+          <small>Rujukan periode aktif</small>
+        </article>
+
+        <article class="stat-card">
+          <span class="stat-label">Baru</span>
+          <strong id="statBaru">0</strong>
+          <small>Rujukan baru</small>
+        </article>
+
+        <article class="stat-card">
+          <span class="stat-label">Kontrol</span>
+          <strong id="statKontrol">0</strong>
+          <small>Rujukan kontrol</small>
+        </article>
+
+        <article class="stat-card">
+          <span class="stat-label">Rumah Sakit</span>
+          <strong id="statRs">0</strong>
+          <small>RS tujuan aktif</small>
+        </article>
+
+      </section>
+
+
+      <section class="panel">
+
+        <div class="panel-heading">
+          <div>
+            <h2>Filter Data</h2>
+            <p>Cari data tanpa membuka Spreadsheet langsung.</p>
+          </div>
+
+          <button
+            class="btn btn-secondary"
+            id="resetButton"
+            type="button"
+          >
+            Reset Filter
+          </button>
+        </div>
+
+
+        <div class="filter-grid">
+
+          <label class="field">
+            <span>Periode</span>
+            <select id="periodFilter"></select>
+          </label>
+
+          <label class="field field-search">
+            <span>Pencarian</span>
+            <input
+              id="searchInput"
+              type="search"
+              placeholder="Nama, BPJS, dokter, DX, RS..."
+              autocomplete="off"
+            >
+          </label>
+
+          <label class="field">
+            <span>Dokter</span>
+            <select id="doctorFilter">
+              <option value="">Semua Dokter</option>
+            </select>
+          </label>
+
+          <label class="field">
+            <span>Status</span>
+            <select id="statusFilter">
+              <option value="">Semua Status</option>
+            </select>
+          </label>
+
+          <label class="field">
+            <span>RS Tujuan</span>
+            <select id="hospitalFilter">
+              <option value="">Semua RS</option>
+            </select>
+          </label>
+
+          <label class="field">
+            <span>Poli Tujuan</span>
+            <select id="clinicFilter">
+              <option value="">Semua Poli</option>
+            </select>
+          </label>
+
+        </div>
+
+      </section>
+
+
+      <section class="panel">
+
+        <div class="table-toolbar">
+
+          <div>
+            <h2>Data Rujukan</h2>
+            <p id="resultInfo">Memuat data...</p>
+          </div>
+
+          <label class="page-size">
+            <span>Tampilkan</span>
+
+            <select id="pageSize">
+              <option value="10">10</option>
+              <option value="25" selected>25</option>
+              <option value="50">50</option>
+            </select>
+          </label>
+
+        </div>
+
+
+        <div
+          id="loadingState"
+          class="state-box"
+          hidden
+        >
+          Memuat data...
+        </div>
+
+
+        <div
+          id="emptyState"
+          class="state-box"
+          hidden
+        >
+          Data tidak ditemukan.
+        </div>
+
+
+        <div
+          id="desktopTable"
+          class="table-wrapper"
+        >
+
+          <table>
+            <thead>
+              <tr>
+                <th>Tanggal</th>
+                <th>Dokter</th>
+                <th>Nama</th>
+                <th>BPJS No.</th>
+                <th>Status</th>
+                <th>DX</th>
+                <th>RS Tujuan</th>
+                <th>Poli</th>
+                <th></th>
+              </tr>
+            </thead>
+
+            <tbody id="tableBody"></tbody>
+          </table>
+
+        </div>
+
+
+        <div
+          id="mobileCards"
+          class="mobile-cards"
+        ></div>
+
+
+        <div class="pagination">
+
+          <button
+            type="button"
+            class="btn btn-secondary"
+            id="prevButton"
+          >
+            ← Sebelumnya
+          </button>
+
+          <span id="pageInfo">
+            Halaman 1
+          </span>
+
+          <button
+            type="button"
+            class="btn btn-secondary"
+            id="nextButton"
+          >
+            Berikutnya →
+          </button>
+
+        </div>
+
+      </section>
+
+    </main>
+
+  </div>
+
+
+  <div
+    class="modal-backdrop"
+    id="detailModal"
+    hidden
+  >
+    <div
+      class="modal"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="modalTitle"
+    >
+
+      <div class="modal-header">
+
+        <div>
+          <small>Detail Rujukan</small>
+          <h3 id="modalTitle">-</h3>
+        </div>
+
+        <button
+          type="button"
+          class="modal-close"
+          id="modalClose"
+          aria-label="Tutup"
+        >
+          ×
+        </button>
+
+      </div>
+
+      <div
+        class="detail-grid"
+        id="modalContent"
+      ></div>
+
+    </div>
+  </div>
+
+
+  <script src="assets/js/config.js"></script>
+  <script src="assets/js/ui.js"></script>
+  <script src="assets/js/app.js"></script>
+
+</body>
+</html>
