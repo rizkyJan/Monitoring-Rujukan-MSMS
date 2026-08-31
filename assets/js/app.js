@@ -333,6 +333,7 @@ async function loadFilterOptions_() {
   const filters = payload.data || {};
 
   const doctorOptions = filters.dokter || [];
+  const formDoctorOptions = filters.dokterForm || doctorOptions;
 
   UI.fillSelect(
     elements.doctor,
@@ -344,7 +345,7 @@ async function loadFilterOptions_() {
   // dropdown dokter pada Spreadsheet/filter periode aktif.
   UI.fillSelect(
     elements.formDokter,
-    doctorOptions,
+    formDoctorOptions,
     '- Pilih Dokter -'
   );
 
