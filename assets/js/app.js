@@ -167,6 +167,9 @@ const elements = {
   formDokter:
     document.getElementById('formDokter'),
 
+  formDokterList:
+    document.getElementById('formDokterList'),
+
   formNo:
     document.getElementById('formNo'),
 
@@ -188,8 +191,14 @@ const elements = {
   formRsTujuan:
     document.getElementById('formRsTujuan'),
 
+  formRsTujuanList:
+    document.getElementById('formRsTujuanList'),
+
   formPoliTujuan:
     document.getElementById('formPoliTujuan'),
+
+  formPoliTujuanList:
+    document.getElementById('formPoliTujuanList'),
 
   formKeterangan:
     document.getElementById('formKeterangan'),
@@ -321,6 +330,72 @@ async function loadPeriods_() {
 }
 
 
+function mergeUniqueSuggestions_(...groups) {
+  const map = new Map();
+
+  groups.flat().forEach(value => {
+    const clean = String(value || '').trim();
+
+    if (!clean) {
+      return;
+    }
+
+    const key = clean.toUpperCase();
+
+    if (!map.has(key)) {
+      map.set(key, clean);
+    }
+  });
+
+  return Array
+    .from(map.values())
+    .sort((a, b) =>
+      a.localeCompare(b, 'id', { sensitivity: 'base' })
+    );
+}
+
+
+function fillDatalist_(datalist, values) {
+  if (!datalist) {
+    return;
+  }
+
+  const options = mergeUniqueSuggestions_(values || []);
+
+  datalist.innerHTML = options
+    .map(value =>
+      `<option value="${UI.escapeHtml(value)}"></option>`
+    )
+    .join('');
+}
+
+
+function ensureDatalistSuggestion_(datalist, value) {
+  if (!datalist) {
+    return;
+  }
+
+  const clean = String(value || '').trim();
+
+  if (!clean) {
+    return;
+  }
+
+  const exists = Array
+    .from(datalist.options)
+    .some(option =>
+      String(option.value || '').trim().toUpperCase() ===
+      clean.toUpperCase()
+    );
+
+  if (!exists) {
+    const option = document.createElement('option');
+    option.value = clean;
+    datalist.appendChild(option);
+  }
+}
+
+
 async function loadFilterOptions_() {
   const period = elements.period.value;
 
@@ -336,13 +411,39 @@ async function loadFilterOptions_() {
   const filters = payload.data || {};
 
   const doctorOptions = filters.dokter || [];
-  const formDoctorOptions = filters.dokterForm || doctorOptions;
+
+  /**
+   * Form memakai searchable input + suggestions.
+   *
+   * Dokter:
+   * gabungkan master/dropdown Spreadsheet dengan dokter yang
+   * sudah benar-benar muncul pada data periode.
+   *
+   * User tetap boleh mengetik nilai baru yang belum ada.
+   */
+  const formDoctorOptions =
+    mergeUniqueSuggestions_(
+      filters.dokterForm || [],
+      doctorOptions
+    );
+
+  const rsOptions =
+    mergeUniqueSuggestions_(
+      filters.rs || []
+    );
+
+  const poliOptions =
+    mergeUniqueSuggestions_(
+      filters.poli || []
+    );
 
   state.currentFilterMeta = {
     period,
     nextNo: Number(filters.nextNo || 1),
     nextNoHarian: Number(filters.nextNoHarian || 1),
-    dokterForm: formDoctorOptions
+    dokterForm: formDoctorOptions,
+    rsForm: rsOptions,
+    poliForm: poliOptions
   };
 
   UI.fillSelect(
@@ -351,12 +452,19 @@ async function loadFilterOptions_() {
     'Semua Dokter'
   );
 
-  // Form Tambah/Edit memakai daftar dokter yang sama dengan
-  // dropdown dokter pada Spreadsheet/filter periode aktif.
-  UI.fillSelect(
-    elements.formDokter,
-    formDoctorOptions,
-    '- Pilih Dokter -'
+  fillDatalist_(
+    elements.formDokterList,
+    formDoctorOptions
+  );
+
+  fillDatalist_(
+    elements.formRsTujuanList,
+    rsOptions
+  );
+
+  fillDatalist_(
+    elements.formPoliTujuanList,
+    poliOptions
   );
 
   UI.fillSelect(
@@ -808,24 +916,45 @@ async function updateCreateContextFromDate_() {
       String(filters.nextNoHarian || 1);
 
     /**
-     * Dokter mengikuti dropdown sheet periode tujuan.
+     * Searchable suggestions mengikuti periode tujuan.
+     * Input tidak pernah dikunci ke daftar ini:
+     * jika nama belum ada, ERM tetap boleh mengetik nilai baru.
      */
-    const options =
-      filters.dokterForm ||
-      filters.dokter ||
-      [];
+    const doctorSuggestions =
+      mergeUniqueSuggestions_(
+        filters.dokterForm || [],
+        filters.dokter || []
+      );
 
-    const selectedDoctor =
-      elements.formDokter.value;
-
-    UI.fillSelect(
-      elements.formDokter,
-      options,
-      '- Pilih Dokter -'
+    fillDatalist_(
+      elements.formDokterList,
+      doctorSuggestions
     );
 
-    ensureDoctorOption_(selectedDoctor);
-    elements.formDokter.value = selectedDoctor;
+    fillDatalist_(
+      elements.formRsTujuanList,
+      filters.rs || []
+    );
+
+    fillDatalist_(
+      elements.formPoliTujuanList,
+      filters.poli || []
+    );
+
+    ensureDatalistSuggestion_(
+      elements.formDokterList,
+      elements.formDokter.value
+    );
+
+    ensureDatalistSuggestion_(
+      elements.formRsTujuanList,
+      elements.formRsTujuan.value
+    );
+
+    ensureDatalistSuggestion_(
+      elements.formPoliTujuanList,
+      elements.formPoliTujuan.value
+    );
 
   } catch (error) {
     elements.formNo.value = '';
@@ -935,7 +1064,10 @@ function fillFormFromItem_(item) {
 
   elements.formTanggal.value = displayDateToInput_(item.tanggal);
 
-  ensureDoctorOption_(item.dokter || '');
+  ensureDatalistSuggestion_(
+    elements.formDokterList,
+    item.dokter || ''
+  );
   elements.formDokter.value = item.dokter || '';
 
   elements.formNo.value = item.no || '';
@@ -949,29 +1081,29 @@ function fillFormFromItem_(item) {
   elements.formDx.value = item.dx || '';
   elements.formRsTujuan.value = item.rsTujuan || '';
   elements.formPoliTujuan.value = item.poliTujuan || '';
+
+  ensureDatalistSuggestion_(
+    elements.formRsTujuanList,
+    item.rsTujuan || ''
+  );
+
+  ensureDatalistSuggestion_(
+    elements.formPoliTujuanList,
+    item.poliTujuan || ''
+  );
+
   elements.formKeterangan.value = item.keterangan || '';
   elements.formPemberatTacc.value = item.pemberatTacc || '';
 }
 
 
 function ensureDoctorOption_(value) {
-  const clean = String(value || '').trim();
-
-  if (!clean) {
-    return;
-  }
-
-  const exists = Array.from(elements.formDokter.options)
-    .some(option => option.value === clean);
-
-  // Pengaman untuk data lama: jika suatu dokter lama belum masuk
-  // daftar filter periode, nilainya tetap dapat ditampilkan saat Edit.
-  if (!exists) {
-    const option = document.createElement('option');
-    option.value = clean;
-    option.textContent = clean;
-    elements.formDokter.appendChild(option);
-  }
+  // Dipertahankan sebagai helper kompatibilitas.
+  // Field Dokter sekarang berupa input+datalist, bukan <select>.
+  ensureDatalistSuggestion_(
+    elements.formDokterList,
+    value
+  );
 }
 
 

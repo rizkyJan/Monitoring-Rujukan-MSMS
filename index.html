@@ -375,9 +375,15 @@
 
           <label class="field">
             <span>Dokter</span>
-            <select id="formDokter">
-              <option value="">- Pilih Dokter -</option>
-            </select>
+            <input
+              id="formDokter"
+              type="text"
+              list="formDokterList"
+              maxlength="200"
+              autocomplete="off"
+              placeholder="Ketik atau pilih dokter"
+            >
+            <datalist id="formDokterList"></datalist>
           </label>
 
           <label class="field">
@@ -434,12 +440,28 @@
 
           <label class="field">
             <span>RS Tujuan</span>
-            <input id="formRsTujuan" type="text" maxlength="300" autocomplete="off">
+            <input
+              id="formRsTujuan"
+              type="text"
+              list="formRsTujuanList"
+              maxlength="300"
+              autocomplete="off"
+              placeholder="Ketik atau pilih RS"
+            >
+            <datalist id="formRsTujuanList"></datalist>
           </label>
 
           <label class="field">
             <span>Poli Tujuan</span>
-            <input id="formPoliTujuan" type="text" maxlength="300" autocomplete="off">
+            <input
+              id="formPoliTujuan"
+              type="text"
+              list="formPoliTujuanList"
+              maxlength="300"
+              autocomplete="off"
+              placeholder="Ketik atau pilih poli"
+            >
+            <datalist id="formPoliTujuanList"></datalist>
           </label>
 
           <label class="field form-span-2">
@@ -491,9 +513,9 @@
   ></div>
 
 
-  <script src="assets/js/config.js?v=step3c"></script>
-  <script src="assets/js/ui.js?v=step3c"></script>
-  <script src="assets/js/app.js?v=step3c"></script>
+  <script src="assets/js/config.js?v=step3g"></script>
+  <script src="assets/js/ui.js?v=step3g"></script>
+  <script src="assets/js/app.js?v=step3g"></script>
 
 </body>
 </html>
