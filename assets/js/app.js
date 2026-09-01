@@ -235,11 +235,11 @@ async function init() {
       throw new Error('Tidak ada periode yang tersedia.');
     }
 
-    await Promise.all([
-      loadFilterOptions_(),
-      loadSummary_()
-    ]);
-
+    /**
+     * Halaman utama sekarang menampilkan seluruh periode.
+     * Filter periode/dokter/status/RS/poli tidak diperlukan.
+     */
+    await loadSummary_();
     await loadRujukan_();
 
   } catch (error) {
@@ -519,16 +519,10 @@ async function loadFilterOptions_() {
 
 
 async function loadSummary_() {
-  const period = elements.period.value;
-
-  if (!period) {
-    return;
-  }
-
-  const params = new URLSearchParams({ period });
-  const payload = await apiFetch_(
-    '/summary?' + params.toString()
-  );
+  /**
+   * Tanpa parameter period = statistik seluruh periode.
+   */
+  const payload = await apiFetch_('/summary');
 
   const summary = payload.data || {};
 
@@ -539,13 +533,17 @@ async function loadSummary_() {
 }
 
 
+
 async function loadRujukan_() {
   clearError_();
   setLoading_(true);
 
   try {
+    /**
+     * period sengaja tidak dikirim.
+     * Backend akan menggabungkan seluruh sheet periode.
+     */
     const params = new URLSearchParams({
-      period: elements.period.value,
       page: String(state.page),
       limit: String(state.pageSize)
     });
@@ -554,22 +552,6 @@ async function loadRujukan_() {
 
     if (q) {
       params.set('q', q);
-    }
-
-    if (elements.doctor.value) {
-      params.set('dokter', elements.doctor.value);
-    }
-
-    if (elements.status.value) {
-      params.set('status', elements.status.value);
-    }
-
-    if (elements.hospital.value) {
-      params.set('rs', elements.hospital.value);
-    }
-
-    if (elements.clinic.value) {
-      params.set('poli', elements.clinic.value);
     }
 
     const payload = await apiFetch_(
@@ -599,7 +581,11 @@ async function loadRujukan_() {
 }
 
 
+
 function bindEvents() {
+  /**
+   * Search hanya Nama Pasien / No. BPJS.
+   */
   elements.search.addEventListener(
     'input',
     () => {
@@ -615,47 +601,6 @@ function bindEvents() {
     }
   );
 
-  elements.period.addEventListener(
-    'change',
-    async () => {
-      state.page = 1;
-
-      try {
-        setLoading_(true);
-
-        await Promise.all([
-          loadFilterOptions_(),
-          loadSummary_()
-        ]);
-
-        await loadRujukan_();
-
-      } catch (error) {
-        showError_(
-          error?.message ||
-          'Gagal mengganti periode.'
-        );
-      } finally {
-        setLoading_(false);
-      }
-    }
-  );
-
-  [
-    elements.doctor,
-    elements.status,
-    elements.hospital,
-    elements.clinic
-  ].forEach(element => {
-    element.addEventListener(
-      'change',
-      () => {
-        state.page = 1;
-        loadRujukan_();
-      }
-    );
-  });
-
   elements.pageSize.addEventListener(
     'change',
     () => {
@@ -669,10 +614,6 @@ function bindEvents() {
     'click',
     () => {
       elements.search.value = '';
-      elements.doctor.value = '';
-      elements.status.value = '';
-      elements.hospital.value = '';
-      elements.clinic.value = '';
       state.page = 1;
       loadRujukan_();
     }
@@ -722,14 +663,15 @@ function bindEvents() {
       }
 
       const editButton = event.target.closest(
-        '[data-edit-row]'
+        '[data-edit-index]'
       );
 
       if (editButton) {
-        const row = Number(editButton.dataset.editRow);
+        const index = Number(editButton.dataset.editIndex);
+        const item = state.items[index];
 
-        if (Number.isInteger(row)) {
-          await openEditForm_(row);
+        if (item) {
+          await openEditForm_(item);
         }
       }
     }
@@ -795,6 +737,7 @@ function bindEvents() {
     }
   );
 }
+
 
 
 function render_() {
@@ -1029,7 +972,7 @@ function openCreateForm_() {
 }
 
 
-async function openEditForm_(row) {
+async function openEditForm_(sourceItem) {
   if (!canEdit_()) {
     showToast_('Akun ini tidak memiliki akses edit.', 'error');
     return;
@@ -1038,8 +981,15 @@ async function openEditForm_(row) {
   closeDetail_();
 
   try {
+    const period = String(sourceItem?.period || '').trim();
+    const row = Number(sourceItem?.row);
+
+    if (!period || !Number.isInteger(row)) {
+      throw new Error('Identitas data edit tidak lengkap.');
+    }
+
     const params = new URLSearchParams({
-      period: elements.period.value,
+      period,
       row: String(row)
     });
 
@@ -1053,6 +1003,47 @@ async function openEditForm_(row) {
       throw new Error('Data edit tidak ditemukan.');
     }
 
+    /**
+     * Ambil suggestion Dokter / RS / Poli dari periode record
+     * yang benar, bukan dari satu periode global.
+     */
+    try {
+      const filterParams = new URLSearchParams({
+        period
+      });
+
+      const filterPayload = await apiFetch_(
+        '/filters?' + filterParams.toString()
+      );
+
+      const filters = filterPayload.data || {};
+
+      fillDatalist_(
+        elements.formDokterList,
+        mergeUniqueSuggestions_(
+          filters.dokterForm || [],
+          filters.dokter || []
+        )
+      );
+
+      fillDatalist_(
+        elements.formRsTujuanList,
+        filters.rs || []
+      );
+
+      fillDatalist_(
+        elements.formPoliTujuanList,
+        filters.poli || []
+      );
+
+    } catch (suggestionError) {
+      // Edit tetap boleh dibuka walaupun suggestion gagal dimuat.
+      console.warn(
+        'Suggestion edit gagal dimuat:',
+        suggestionError
+      );
+    }
+
     state.formMode = 'edit';
     state.editingItem = item;
 
@@ -1061,7 +1052,7 @@ async function openEditForm_(row) {
 
     elements.formModalKicker.textContent = 'Edit ERM';
     elements.formModalTitle.textContent = 'Edit Rujukan';
-    elements.formPeriodLabel.textContent = elements.period.value || '-';
+    elements.formPeriodLabel.textContent = period;
     elements.formRowWrap.hidden = false;
     elements.formRowLabel.textContent = String(item.row);
     elements.formSubmit.textContent = 'Simpan Perubahan';
@@ -1079,6 +1070,7 @@ async function openEditForm_(row) {
     );
   }
 }
+
 
 
 function resetFormFields_() {
@@ -1238,24 +1230,14 @@ async function submitForm_(event) {
         }
       );
 
-      const createdPeriod = String(
-        payload.period || ''
-      ).trim();
-
       /**
-       * Jika tanggal menghasilkan periode lain (mis. 01/09/2026),
-       * pilih otomatis periode tersebut setelah data tersimpan.
+       * Jika Create membuat sheet bulan baru, refresh daftar periode
+       * internal agar create berikutnya mengenali sheet tersebut.
+       * Halaman utama tetap menampilkan semua periode.
        */
-      if (createdPeriod) {
+      if (payload.period) {
         await loadPeriods_();
-
-        const exists = Array.from(elements.period.options)
-          .some(option => option.value === createdPeriod);
-
-        if (exists) {
-          elements.period.value = createdPeriod;
-          state.page = 1;
-        }
+        state.page = 1;
       }
 
       closeForm_(true);
@@ -1290,7 +1272,7 @@ async function submitForm_(event) {
         {
           method: 'POST',
           body: {
-            period: elements.period.value,
+            period: state.editingItem.period,
             row: state.editingItem.row,
             data: changes,
             expected: {
@@ -1333,11 +1315,7 @@ async function submitForm_(event) {
 
 async function refreshAfterWrite_() {
   try {
-    await Promise.all([
-      loadFilterOptions_(),
-      loadSummary_()
-    ]);
-
+    await loadSummary_();
     await loadRujukan_();
   } catch (error) {
     showToast_(

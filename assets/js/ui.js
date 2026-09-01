@@ -76,7 +76,7 @@ const UI = {
               <button
                 class="edit-button"
                 type="button"
-                data-edit-row="${this.escapeHtml(item.row)}"
+                data-edit-index="${index}"
               >
                 Edit
               </button>
@@ -155,6 +155,7 @@ const UI = {
 
   detailHtml(item) {
     const fields = [
+      ['Periode', item.period || '-'],
       ['Tanggal', item.tanggal],
       ['Dokter', item.dokter],
       ['No', item.no],

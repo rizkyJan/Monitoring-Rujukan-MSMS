@@ -15,6 +15,14 @@
     rel="stylesheet"
     href="assets/css/style.css?v=step3c"
   >
+<style>
+    .filter-grid-simple {
+      grid-template-columns: minmax(280px, 1fr) !important;
+    }
+    .filter-grid-simple .field-search {
+      grid-column: 1 / -1;
+    }
+  </style>
 </head>
 
 <body>
@@ -96,8 +104,11 @@
 
           <div class="panel-heading">
             <div>
-              <h2>Filter Data</h2>
-              <p>Cari data tanpa membuka Spreadsheet langsung.</p>
+              <h2>Cari Pasien</h2>
+              <p>
+                Semua periode ditampilkan. Pencarian hanya berdasarkan
+                nama pasien atau No. BPJS.
+              </p>
             </div>
 
             <button
@@ -105,57 +116,43 @@
               id="resetButton"
               type="button"
             >
-              Reset Filter
+              Reset Pencarian
             </button>
           </div>
 
 
-          <div class="filter-grid">
+          <div class="filter-grid filter-grid-simple">
 
-            <label class="field">
-              <span>Periode</span>
-              <select id="periodFilter">
-                <option value="">Memuat periode...</option>
-              </select>
-            </label>
+            <!--
+              Tetap ada secara hidden untuk kompatibilitas fungsi form
+              Tambah/Edit. Bukan filter halaman utama.
+            -->
+            <select id="periodFilter" hidden aria-hidden="true"></select>
 
             <label class="field field-search">
-              <span>Pencarian</span>
+              <span>Nama Pasien / No. BPJS</span>
               <input
                 id="searchInput"
                 type="search"
-                placeholder="Nama, BPJS, dokter, DX, RS..."
+                placeholder="Contoh: SRI LESTARI atau 00002580738344"
                 autocomplete="off"
               >
             </label>
 
-            <label class="field">
-              <span>Dokter</span>
-              <select id="doctorFilter">
-                <option value="">Semua Dokter</option>
-              </select>
-            </label>
-
-            <label class="field">
-              <span>Status</span>
-              <select id="statusFilter">
-                <option value="">Semua Status</option>
-              </select>
-            </label>
-
-            <label class="field">
-              <span>RS Tujuan</span>
-              <select id="hospitalFilter">
-                <option value="">Semua RS</option>
-              </select>
-            </label>
-
-            <label class="field">
-              <span>Poli Tujuan</span>
-              <select id="clinicFilter">
-                <option value="">Semua Poli</option>
-              </select>
-            </label>
+            <!-- Filter lama disimpan hidden agar JavaScript lama/kompatibilitas
+                 tetap aman, tetapi tidak digunakan pada pencarian utama. -->
+            <select id="doctorFilter" hidden aria-hidden="true">
+              <option value=""></option>
+            </select>
+            <select id="statusFilter" hidden aria-hidden="true">
+              <option value=""></option>
+            </select>
+            <select id="hospitalFilter" hidden aria-hidden="true">
+              <option value=""></option>
+            </select>
+            <select id="clinicFilter" hidden aria-hidden="true">
+              <option value=""></option>
+            </select>
 
           </div>
 
@@ -513,9 +510,9 @@
   ></div>
 
 
-  <script src="assets/js/config.js?v=step3h"></script>
-  <script src="assets/js/ui.js?v=step3h"></script>
-  <script src="assets/js/app.js?v=step3h"></script>
+  <script src="assets/js/config.js?v=step4a"></script>
+  <script src="assets/js/ui.js?v=step4a"></script>
+  <script src="assets/js/app.js?v=step4a"></script>
 
 </body>
 </html>
