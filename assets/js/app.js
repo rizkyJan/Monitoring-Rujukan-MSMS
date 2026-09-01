@@ -24,7 +24,8 @@ const state = {
   formSaving: false,
 
   currentFilterMeta: null,
-  createPreviewToken: 0
+  createPreviewToken: 0,
+  listRequestToken: 0
 };
 
 
@@ -236,8 +237,8 @@ async function init() {
     }
 
     /**
-     * Halaman utama sekarang menampilkan seluruh periode.
-     * Filter periode/dokter/status/RS/poli tidak diperlukan.
+     * Halaman utama hanya memakai search Nama/BPJS.
+     * Summary global berasal dari cache backend.
      */
     await loadSummary_();
     await loadRujukan_();
@@ -427,75 +428,21 @@ function ensureDatalistSuggestion_(datalist, value) {
 }
 
 
-async function loadFilterOptions_() {
-  const period = elements.period.value;
-
-  if (!period) {
-    return;
-  }
-
-  const params = new URLSearchParams({ period });
-  const payload = await apiFetch_(
-    '/filters?' + params.toString()
-  );
-
-  const filters = payload.data || {};
-
-  const doctorOptions = filters.dokter || [];
-
+async function loadGlobalFilterOptions_() {
   /**
-   * Form memakai searchable input + suggestions.
+   * /filters tanpa period mengembalikan:
+   * - Dokter/Status/RS/Poli global
+   * - summary global
    *
-   * Dokter:
-   * gabungkan master/dropdown Spreadsheet dengan dokter yang
-   * sudah benar-benar muncul pada data periode.
-   *
-   * User tetap boleh mengetik nilai baru yang belum ada.
+   * Jadi startup hanya perlu SATU scan metadata backend.
    */
-  const formDoctorOptions =
-    mergeUniqueSuggestions_(
-      filters.dokterForm || [],
-      doctorOptions
-    );
-
-  const rsOptions =
-    mergeUniqueSuggestions_(
-      filters.rs || []
-    );
-
-  const poliOptions =
-    mergeUniqueSuggestions_(
-      filters.poli || []
-    );
-
-  state.currentFilterMeta = {
-    period,
-    nextNo: Number(filters.nextNo || 1),
-    nextNoHarian: Number(filters.nextNoHarian || 1),
-    dokterForm: formDoctorOptions,
-    rsForm: rsOptions,
-    poliForm: poliOptions
-  };
+  const payload = await apiFetch_('/filters');
+  const filters = payload.data || {};
 
   UI.fillSelect(
     elements.doctor,
-    doctorOptions,
+    filters.dokter || [],
     'Semua Dokter'
-  );
-
-  fillDatalist_(
-    elements.formDokterList,
-    formDoctorOptions
-  );
-
-  fillDatalist_(
-    elements.formRsTujuanList,
-    rsOptions
-  );
-
-  fillDatalist_(
-    elements.formPoliTujuanList,
-    poliOptions
   );
 
   UI.fillSelect(
@@ -515,7 +462,15 @@ async function loadFilterOptions_() {
     filters.poli || [],
     'Semua Poli'
   );
+
+  const summary = filters.summary || {};
+
+  elements.statTotal.textContent = summary.total ?? 0;
+  elements.statBaru.textContent = summary.baru ?? 0;
+  elements.statKontrol.textContent = summary.kontrol ?? 0;
+  elements.statRs.textContent = summary.rumahSakit ?? 0;
 }
+
 
 
 async function loadSummary_() {
@@ -536,20 +491,26 @@ async function loadSummary_() {
 
 async function loadRujukan_() {
   clearError_();
+
+  const requestToken = ++state.listRequestToken;
+  const q = elements.search.value.trim();
+
+  // Saat mengetik, beri feedback tanpa mengubah data lama lebih dulu.
+  if (q) {
+    elements.resultInfo.textContent = 'Mencari pasien...';
+  }
+
   setLoading_(true);
 
   try {
-    /**
-     * period sengaja tidak dikirim.
-     * Backend akan menggabungkan seluruh sheet periode.
-     */
     const params = new URLSearchParams({
       page: String(state.page),
       limit: String(state.pageSize)
     });
 
-    const q = elements.search.value.trim();
-
+    /**
+     * Search utama hanya Nama Pasien / No. BPJS.
+     */
     if (q) {
       params.set('q', q);
     }
@@ -557,6 +518,11 @@ async function loadRujukan_() {
     const payload = await apiFetch_(
       '/rujukan?' + params.toString()
     );
+
+    // Abaikan response lama kalau user sudah mengetik query/filter baru.
+    if (requestToken !== state.listRequestToken) {
+      return;
+    }
 
     const data = payload.data || {};
 
@@ -571,12 +537,18 @@ async function loadRujukan_() {
     render_();
 
   } catch (error) {
+    if (requestToken !== state.listRequestToken) {
+      return;
+    }
+
     showError_(
       error?.message ||
       'Gagal membaca data rujukan.'
     );
   } finally {
-    setLoading_(false);
+    if (requestToken === state.listRequestToken) {
+      setLoading_(false);
+    }
   }
 }
 
@@ -596,7 +568,7 @@ function bindEvents() {
           state.page = 1;
           loadRujukan_();
         },
-        APP_CONFIG.SEARCH_DEBOUNCE_MS
+        500
       );
     }
   );

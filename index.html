@@ -19,6 +19,7 @@
     .filter-grid-simple {
       grid-template-columns: minmax(280px, 1fr) !important;
     }
+
     .filter-grid-simple .field-search {
       grid-column: 1 / -1;
     }
@@ -76,13 +77,13 @@
           <article class="stat-card">
             <span class="stat-label">Total Data</span>
             <strong id="statTotal">0</strong>
-            <small>Rujukan periode aktif</small>
+            <small>Rujukan seluruh periode</small>
           </article>
 
           <article class="stat-card">
             <span class="stat-label">Baru</span>
             <strong id="statBaru">0</strong>
-            <small>Rujukan baru</small>
+            <small>Rujukan baru seluruh periode</small>
           </article>
 
           <article class="stat-card">
@@ -94,7 +95,7 @@
           <article class="stat-card">
             <span class="stat-label">Rumah Sakit</span>
             <strong id="statRs">0</strong>
-            <small>RS tujuan aktif</small>
+            <small>RS tujuan seluruh periode</small>
           </article>
 
         </section>
@@ -120,13 +121,8 @@
             </button>
           </div>
 
-
           <div class="filter-grid filter-grid-simple">
 
-            <!--
-              Tetap ada secara hidden untuk kompatibilitas fungsi form
-              Tambah/Edit. Bukan filter halaman utama.
-            -->
             <select id="periodFilter" hidden aria-hidden="true"></select>
 
             <label class="field field-search">
@@ -139,8 +135,6 @@
               >
             </label>
 
-            <!-- Filter lama disimpan hidden agar JavaScript lama/kompatibilitas
-                 tetap aman, tetapi tidak digunakan pada pencarian utama. -->
             <select id="doctorFilter" hidden aria-hidden="true">
               <option value=""></option>
             </select>
@@ -510,9 +504,9 @@
   ></div>
 
 
-  <script src="assets/js/config.js?v=step4a"></script>
-  <script src="assets/js/ui.js?v=step4a"></script>
-  <script src="assets/js/app.js?v=step4a"></script>
+  <script src="assets/js/config.js?v=step4c-lite"></script>
+  <script src="assets/js/ui.js?v=step4c-lite"></script>
+  <script src="assets/js/app.js?v=step4c-lite"></script>
 
 </body>
 </html>
