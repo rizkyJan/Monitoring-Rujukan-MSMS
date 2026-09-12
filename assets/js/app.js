@@ -24,6 +24,14 @@ const state = {
   formSaving: false,
 
   currentFilterMeta: null,
+
+  // Pilihan global dari SEMUA periode (dibaca dari D1 cache kecil).
+  formOptions: {
+    dokter: [],
+    rs: [],
+    poli: []
+  },
+
   createPreviewToken: 0,
   listRequestToken: 0
 };
@@ -236,6 +244,9 @@ async function init() {
       throw new Error('Tidak ada periode yang tersedia.');
     }
 
+    // Dokter / RS / Poli untuk form selalu GLOBAL, bukan per bulan.
+    await loadGlobalFilterOptions_();
+
     /**
      * Halaman utama hanya memakai search Nama/BPJS.
      * Summary global berasal dari cache backend.
@@ -430,47 +441,120 @@ function ensureDatalistSuggestion_(datalist, value) {
 
 async function loadGlobalFilterOptions_() {
   /**
-   * /filters tanpa period mengembalikan:
-   * - Dokter/Status/RS/Poli global
-   * - summary global
+   * TANPA period = pilihan dari SELURUH RIWAYAT data.
+   * Worker terbaru membaca daftar kecil dari D1, bukan scan satu bulan.
    *
-   * Jadi startup hanya perlu SATU scan metadata backend.
+   * Input form tetap <input list="..."> sehingga nilai baru tetap
+   * boleh diketik walaupun belum pernah ada di daftar.
    */
   const payload = await apiFetch_('/filters');
   const filters = payload.data || {};
 
-  UI.fillSelect(
-    elements.doctor,
-    filters.dokter || [],
-    'Semua Dokter'
+  state.formOptions = {
+    dokter: mergeUniqueSuggestions_(
+      filters.dokterForm || [],
+      filters.dokter || []
+    ),
+    rs: mergeUniqueSuggestions_(filters.rs || []),
+    poli: mergeUniqueSuggestions_(filters.poli || [])
+  };
+
+  fillDatalist_(
+    elements.formDokterList,
+    state.formOptions.dokter
   );
 
-  UI.fillSelect(
-    elements.status,
-    filters.status || [],
-    'Semua Status'
+  fillDatalist_(
+    elements.formRsTujuanList,
+    state.formOptions.rs
   );
 
-  UI.fillSelect(
-    elements.hospital,
-    filters.rs || [],
-    'Semua RS'
+  fillDatalist_(
+    elements.formPoliTujuanList,
+    state.formOptions.poli
   );
 
-  UI.fillSelect(
-    elements.clinic,
-    filters.poli || [],
-    'Semua Poli'
-  );
+  // Kompatibilitas jika filter lama masih ada di HTML.
+  if (elements.doctor) {
+    UI.fillSelect(
+      elements.doctor,
+      state.formOptions.dokter,
+      'Semua Dokter'
+    );
+  }
 
-  const summary = filters.summary || {};
+  if (elements.status) {
+    UI.fillSelect(
+      elements.status,
+      filters.status || [],
+      'Semua Status'
+    );
+  }
 
-  elements.statTotal.textContent = summary.total ?? 0;
-  elements.statBaru.textContent = summary.baru ?? 0;
-  elements.statKontrol.textContent = summary.kontrol ?? 0;
-  elements.statRs.textContent = summary.rumahSakit ?? 0;
+  if (elements.hospital) {
+    UI.fillSelect(
+      elements.hospital,
+      state.formOptions.rs,
+      'Semua RS'
+    );
+  }
+
+  if (elements.clinic) {
+    UI.fillSelect(
+      elements.clinic,
+      state.formOptions.poli,
+      'Semua Poli'
+    );
+  }
 }
 
+
+function applyGlobalFormSuggestions_() {
+  fillDatalist_(
+    elements.formDokterList,
+    state.formOptions.dokter
+  );
+
+  fillDatalist_(
+    elements.formRsTujuanList,
+    state.formOptions.rs
+  );
+
+  fillDatalist_(
+    elements.formPoliTujuanList,
+    state.formOptions.poli
+  );
+}
+
+
+function rememberGlobalFormOptions_(data) {
+  const add = (list, value) => {
+    const clean = String(value || '').trim();
+
+    if (!clean) {
+      return list;
+    }
+
+    return mergeUniqueSuggestions_(list || [], [clean]);
+  };
+
+  state.formOptions.dokter = add(
+    state.formOptions.dokter,
+    data?.dokter
+  );
+
+  state.formOptions.rs = add(
+    state.formOptions.rs,
+    data?.rsTujuan
+  );
+
+  state.formOptions.poli = add(
+    state.formOptions.poli,
+    data?.poliTujuan
+  );
+
+  applyGlobalFormSuggestions_();
+}
 
 
 async function loadSummary_() {
@@ -862,30 +946,10 @@ async function updateCreateContextFromDate_() {
       String(filters.nextNoHarian || 1);
 
     /**
-     * Searchable suggestions mengikuti periode tujuan.
-     * Input tidak pernah dikunci ke daftar ini:
-     * jika nama belum ada, ERM tetap boleh mengetik nilai baru.
+     * Nomor tetap dihitung berdasarkan PERIODE tujuan, tetapi
+     * Dokter / RS / Poli selalu memakai master GLOBAL semua periode.
      */
-    const doctorSuggestions =
-      mergeUniqueSuggestions_(
-        filters.dokterForm || [],
-        filters.dokter || []
-      );
-
-    fillDatalist_(
-      elements.formDokterList,
-      doctorSuggestions
-    );
-
-    fillDatalist_(
-      elements.formRsTujuanList,
-      filters.rs || []
-    );
-
-    fillDatalist_(
-      elements.formPoliTujuanList,
-      filters.poli || []
-    );
+    applyGlobalFormSuggestions_();
 
     ensureDatalistSuggestion_(
       elements.formDokterList,
@@ -919,6 +983,9 @@ function openCreateForm_() {
     showToast_('Akun ini tidak memiliki akses tambah.', 'error');
     return;
   }
+
+  // Dropdown searchable selalu dari seluruh riwayat.
+  applyGlobalFormSuggestions_();
 
   state.formMode = 'create';
   state.editingItem = null;
@@ -976,45 +1043,10 @@ async function openEditForm_(sourceItem) {
     }
 
     /**
-     * Ambil suggestion Dokter / RS / Poli dari periode record
-     * yang benar, bukan dari satu periode global.
+     * Edit juga memakai pilihan GLOBAL seluruh riwayat.
+     * Nilai lama record tetap ditambahkan ke datalist bila belum ada.
      */
-    try {
-      const filterParams = new URLSearchParams({
-        period
-      });
-
-      const filterPayload = await apiFetch_(
-        '/filters?' + filterParams.toString()
-      );
-
-      const filters = filterPayload.data || {};
-
-      fillDatalist_(
-        elements.formDokterList,
-        mergeUniqueSuggestions_(
-          filters.dokterForm || [],
-          filters.dokter || []
-        )
-      );
-
-      fillDatalist_(
-        elements.formRsTujuanList,
-        filters.rs || []
-      );
-
-      fillDatalist_(
-        elements.formPoliTujuanList,
-        filters.poli || []
-      );
-
-    } catch (suggestionError) {
-      // Edit tetap boleh dibuka walaupun suggestion gagal dimuat.
-      console.warn(
-        'Suggestion edit gagal dimuat:',
-        suggestionError
-      );
-    }
+    applyGlobalFormSuggestions_();
 
     state.formMode = 'edit';
     state.editingItem = item;
@@ -1212,6 +1244,9 @@ async function submitForm_(event) {
         state.page = 1;
       }
 
+      // Nilai baru langsung tersedia sebagai pilihan pada form berikutnya.
+      rememberGlobalFormOptions_(data);
+
       closeForm_(true);
       showToast_(
         payload.message ||
@@ -1255,6 +1290,9 @@ async function submitForm_(event) {
           }
         }
       );
+
+      // Jika edit memperkenalkan Dokter / RS / Poli baru, ingat di sesi ini.
+      rememberGlobalFormOptions_(data);
 
       closeForm_(true);
       showToast_(
