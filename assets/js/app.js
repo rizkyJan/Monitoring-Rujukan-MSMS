@@ -22,6 +22,7 @@ const state = {
   editingItem: null,
   formSnapshot: null,
   formSaving: false,
+  deleteSaving: false,
 
   currentFilterMeta: null,
 
@@ -355,6 +356,11 @@ function canWrite_() {
 
 function canEdit_() {
   return canWrite_() && state.permissions.update;
+}
+
+
+function canDelete_() {
+  return canWrite_() && state.permissions.delete;
 }
 
 
@@ -718,6 +724,21 @@ function bindEvents() {
         return;
       }
 
+      const deleteButton = event.target.closest(
+        '[data-delete-index]'
+      );
+
+      if (deleteButton) {
+        const index = Number(deleteButton.dataset.deleteIndex);
+        const item = state.items[index];
+
+        if (item) {
+          await deleteRujukan_(item);
+        }
+
+        return;
+      }
+
       const editButton = event.target.closest(
         '[data-edit-index]'
       );
@@ -821,6 +842,8 @@ function render_() {
     )
     .join('');
 
+  injectDeleteButtons_();
+
   const displayTotalPages = Math.max(
     1,
     state.totalPages
@@ -833,6 +856,143 @@ function render_() {
   elements.next.disabled =
     state.totalPages === 0 ||
     state.page >= state.totalPages;
+}
+
+
+function injectDeleteButtons_() {
+  if (!canDelete_()) {
+    return;
+  }
+
+  document
+    .querySelectorAll('[data-detail-index]')
+    .forEach(detailButton => {
+      const index = Number(detailButton.dataset.detailIndex);
+      const actionWrap = detailButton.parentElement;
+
+      if (
+        !Number.isInteger(index) ||
+        !actionWrap ||
+        actionWrap.querySelector(`[data-delete-index="${index}"]`)
+      ) {
+        return;
+      }
+
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'delete-button';
+      button.dataset.deleteIndex = String(index);
+      button.textContent = 'Hapus';
+      button.style.background = '#fee2e2';
+      button.style.color = '#b91c1c';
+      button.style.border = '1px solid #fecaca';
+      button.style.borderRadius = '12px';
+      button.style.padding = '10px 14px';
+      button.style.fontWeight = '700';
+      button.style.cursor = 'pointer';
+
+      actionWrap.appendChild(button);
+    });
+}
+
+
+async function deleteRujukan_(sourceItem) {
+  if (!canDelete_()) {
+    showToast_('Akun ini tidak memiliki akses hapus.', 'error');
+    return;
+  }
+
+  if (state.deleteSaving) {
+    return;
+  }
+
+  try {
+    const period = String(sourceItem?.period || '').trim();
+    const row = Number(sourceItem?.row);
+
+    if (!period || !Number.isInteger(row)) {
+      throw new Error('Identitas data hapus tidak lengkap.');
+    }
+
+    // Ambil data terbaru dahulu agar user mengonfirmasi record yang benar.
+    const params = new URLSearchParams({
+      period,
+      row: String(row)
+    });
+
+    const detailPayload = await apiFetch_(
+      '/rujukan-detail?' + params.toString()
+    );
+
+    const item = detailPayload.data;
+
+    if (!item) {
+      throw new Error('Data yang akan dihapus tidak ditemukan.');
+    }
+
+    const typed = window.prompt(
+      `PERINGATAN HAPUS DATA\n\n` +
+      `Nama: ${item.nama || '-'}\n` +
+      `BPJS: ${item.bpjs || '-'}\n` +
+      `Periode: ${period}\n` +
+      `Row: ${row}\n\n` +
+      `Data akan dihapus dari Spreadsheet dan D1.\n` +
+      `Ketik HAPUS untuk melanjutkan.`
+    );
+
+    if (String(typed || '').trim().toUpperCase() !== 'HAPUS') {
+      showToast_('Penghapusan dibatalkan.', 'success');
+      return;
+    }
+
+    const finalConfirm = window.confirm(
+      `Konfirmasi terakhir:\n\n` +
+      `Hapus data ${item.nama || 'pasien ini'} sekarang?\n\n` +
+      `Tindakan ini tidak dapat dibatalkan dari web.`
+    );
+
+    if (!finalConfirm) {
+      showToast_('Penghapusan dibatalkan.', 'success');
+      return;
+    }
+
+    state.deleteSaving = true;
+
+    const payload = await apiFetch_(
+      '/rujukan-delete',
+      {
+        method: 'POST',
+        body: {
+          period,
+          row,
+          expected: {
+            tanggal: item.tanggal || '',
+            nama: item.nama || '',
+            bpjs: item.bpjs || ''
+          }
+        }
+      }
+    );
+
+    showToast_(
+      payload.message || 'Data rujukan berhasil dihapus.',
+      'success'
+    );
+
+    if (payload.d1SyncWarning) {
+      showToast_(payload.d1SyncWarning, 'error');
+    }
+
+    await refreshAfterWrite_();
+
+  } catch (error) {
+    showToast_(
+      error?.message || 'Gagal menghapus data.',
+      'error'
+    );
+  } finally {
+    state.deleteSaving = false;
+  }
 }
 
 
