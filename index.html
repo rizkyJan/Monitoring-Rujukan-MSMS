@@ -23,6 +23,23 @@
     .filter-grid-simple .field-search {
       grid-column: 1 / -1;
     }
+
+    /* Dashboard monitoring: 6 kartu = 3 + 3 pada desktop. */
+    .stats-grid-monitoring {
+      grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+    }
+
+    @media (max-width: 850px) {
+      .stats-grid-monitoring {
+        grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
+      }
+    }
+
+    @media (max-width: 520px) {
+      .stats-grid-monitoring {
+        grid-template-columns: 1fr !important;
+      }
+    }
   </style>
 </head>
 
@@ -72,12 +89,24 @@
 
       <section id="appContent">
 
-        <section class="stats-grid">
+        <section class="stats-grid stats-grid-monitoring">
 
           <article class="stat-card">
-            <span class="stat-label">Total Data</span>
+            <span class="stat-label">Total Rujukan</span>
             <strong id="statTotal">0</strong>
             <small>Rujukan seluruh periode</small>
+          </article>
+
+          <article class="stat-card">
+            <span class="stat-label">Bulan Ini</span>
+            <strong id="statBulanIni">0</strong>
+            <small>Rujukan bulan berjalan</small>
+          </article>
+
+          <article class="stat-card">
+            <span class="stat-label">Hari Ini</span>
+            <strong id="statHariIni">0</strong>
+            <small>Rujukan hari ini</small>
           </article>
 
           <article class="stat-card">
@@ -89,13 +118,13 @@
           <article class="stat-card">
             <span class="stat-label">Kontrol</span>
             <strong id="statKontrol">0</strong>
-            <small>Rujukan kontrol</small>
+            <small>Rujukan kontrol seluruh periode</small>
           </article>
 
           <article class="stat-card">
-            <span class="stat-label">Rumah Sakit</span>
-            <strong id="statRs">0</strong>
-            <small>RS tujuan seluruh periode</small>
+            <span class="stat-label">Hasil Pencarian</span>
+            <strong id="statHasilPencarian">0</strong>
+            <small>Jumlah hasil sesuai pencarian</small>
           </article>
 
         </section>
@@ -506,7 +535,7 @@
 
   <script src="assets/js/config.js?v=step4c-lite"></script>
   <script src="assets/js/ui.js?v=step4c-lite"></script>
-  <script src="assets/js/app.js?v=delete-safe-v1"></script>
+  <script src="assets/js/app.js?v=dashboard-6-kartu-v1"></script>
 
 </body>
 </html>

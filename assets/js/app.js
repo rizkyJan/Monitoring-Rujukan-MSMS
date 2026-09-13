@@ -78,14 +78,20 @@ const elements = {
   statTotal:
     document.getElementById('statTotal'),
 
+  statBulanIni:
+    document.getElementById('statBulanIni'),
+
+  statHariIni:
+    document.getElementById('statHariIni'),
+
   statBaru:
     document.getElementById('statBaru'),
 
   statKontrol:
     document.getElementById('statKontrol'),
 
-  statRs:
-    document.getElementById('statRs'),
+  statHasilPencarian:
+    document.getElementById('statHasilPencarian'),
 
   resultInfo:
     document.getElementById('resultInfo'),
@@ -572,9 +578,15 @@ async function loadSummary_() {
   const summary = payload.data || {};
 
   elements.statTotal.textContent = summary.total ?? 0;
+  elements.statBulanIni.textContent = summary.bulanIni ?? '-';
+  elements.statHariIni.textContent = summary.hariIni ?? '-';
   elements.statBaru.textContent = summary.baru ?? 0;
   elements.statKontrol.textContent = summary.kontrol ?? 0;
-  elements.statRs.textContent = summary.rumahSakit ?? 0;
+
+  // Saat pencarian kosong, hasil pencarian sama dengan total rujukan.
+  if (!elements.search.value.trim()) {
+    elements.statHasilPencarian.textContent = summary.total ?? 0;
+  }
 }
 
 
@@ -588,6 +600,7 @@ async function loadRujukan_() {
   // Saat mengetik, beri feedback tanpa mengubah data lama lebih dulu.
   if (q) {
     elements.resultInfo.textContent = 'Mencari pasien...';
+    elements.statHasilPencarian.textContent = '...';
   }
 
   setLoading_(true);
@@ -820,6 +833,10 @@ function bindEvents() {
 function render_() {
   elements.resultInfo.textContent =
     `${state.total} data ditemukan`;
+
+  // Selalu mengikuti total hasil query aktif. Ketika pencarian kosong,
+  // nilainya otomatis sama dengan Total Rujukan.
+  elements.statHasilPencarian.textContent = state.total;
 
   const hasData = state.items.length > 0;
 
