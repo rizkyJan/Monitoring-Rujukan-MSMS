@@ -34,6 +34,7 @@ const state = {
   },
 
   createPreviewToken: 0,
+  editPreviewToken: 0,
   listRequestToken: 0
 };
 
@@ -810,6 +811,11 @@ function bindEvents() {
     () => {
       if (state.formMode === 'create') {
         updateCreateContextFromDate_();
+        return;
+      }
+
+      if (state.formMode === 'edit') {
+        updateEditNumberPreviewFromDate_();
       }
     }
   );
@@ -1223,14 +1229,19 @@ async function fillMissingEditNumbersFromD1_(item) {
   const missingNo = !hasPositiveSequenceNumber_(item?.no);
   const missingDaily = !hasPositiveSequenceNumber_(item?.noHarian);
 
-  if (!missingNo && !missingDaily) {
+  /**
+   * Kalau tanggal asli row kosong, No. Harian tetap dihitung ulang dari
+   * tanggal efektif (carry-forward dari row tanggal valid sebelumnya).
+   * Ini juga memperbaiki row yang pernah terlanjur mendapat No. Harian
+   * salah dari versi lama.
+   */
+  const shouldRefreshDaily =
+    missingDaily || !String(item?.tanggal || '').trim();
+
+  if (!missingNo && !shouldRefreshDaily) {
     return;
   }
 
-  /**
-   * Jangan batal hanya karena tanggal pada row Spreadsheet kosong.
-   * Worker sekarang dapat mencari tanggal efektif dari row sebelumnya.
-   */
   const params = new URLSearchParams({
     period: String(item?.period || '').trim(),
     row: String(item?.row || '')
@@ -1242,12 +1253,13 @@ async function fillMissingEditNumbersFromD1_(item) {
     params.set('tanggal', inputDate);
   }
 
-  // Beri indikator visual supaya user tahu preview sedang dihitung.
+  const previewToken = ++state.editPreviewToken;
+
   if (missingNo) {
     elements.formNo.value = 'Menghitung...';
   }
 
-  if (missingDaily) {
+  if (shouldRefreshDaily) {
     elements.formNoHarian.value = 'Menghitung...';
   }
 
@@ -1255,6 +1267,10 @@ async function fillMissingEditNumbersFromD1_(item) {
     const payload = await apiFetch_(
       '/filters?' + params.toString()
     );
+
+    if (previewToken !== state.editPreviewToken) {
+      return;
+    }
 
     const preview = payload.data || {};
 
@@ -1264,25 +1280,111 @@ async function fillMissingEditNumbersFromD1_(item) {
         : '';
     }
 
-    if (missingDaily) {
+    if (shouldRefreshDaily) {
       elements.formNoHarian.value = preview.nextNoHarian
         ? String(preview.nextNoHarian)
         : '';
     }
 
   } catch (error) {
+    if (previewToken !== state.editPreviewToken) {
+      return;
+    }
+
     if (missingNo) {
       elements.formNo.value = '';
     }
 
-    if (missingDaily) {
-      elements.formNoHarian.value = '';
+    if (shouldRefreshDaily) {
+      elements.formNoHarian.value = item?.noHarian || '';
     }
 
-    // Edit tetap boleh dibuka. Backend GAS menghitung ulang saat Save.
     console.warn(
       'Preview nomor edit gagal:',
       error?.message || error
+    );
+  }
+}
+
+
+/**
+ * Saat Tanggal pada form EDIT diganti, No. Harian wajib dihitung ulang
+ * berdasarkan tanggal baru + posisi row pasien. No bulanan tidak berubah
+ * kecuali memang masih kosong.
+ */
+async function updateEditNumberPreviewFromDate_() {
+  const item = state.editingItem;
+
+  if (!item) {
+    return;
+  }
+
+  const period = String(item.period || '').trim();
+  const row = Number(item.row);
+
+  if (!period || !Number.isInteger(row)) {
+    return;
+  }
+
+  const tanggal = String(elements.formTanggal.value || '').trim();
+
+  if (!tanggal) {
+    elements.formNoHarian.value = '';
+    return;
+  }
+
+  const previewToken = ++state.editPreviewToken;
+  const missingNo = !hasPositiveSequenceNumber_(item.no);
+
+  if (missingNo) {
+    elements.formNo.value = 'Menghitung...';
+  }
+
+  elements.formNoHarian.value = 'Menghitung...';
+
+  try {
+    const params = new URLSearchParams({
+      period,
+      row: String(row),
+      tanggal
+    });
+
+    const payload = await apiFetch_(
+      '/filters?' + params.toString()
+    );
+
+    if (previewToken !== state.editPreviewToken) {
+      return;
+    }
+
+    const preview = payload.data || {};
+
+    if (missingNo) {
+      elements.formNo.value = preview.nextNo
+        ? String(preview.nextNo)
+        : '';
+    }
+
+    elements.formNoHarian.value = preview.nextNoHarian
+      ? String(preview.nextNoHarian)
+      : '';
+
+    clearFormError_();
+
+  } catch (error) {
+    if (previewToken !== state.editPreviewToken) {
+      return;
+    }
+
+    if (missingNo) {
+      elements.formNo.value = item.no || '';
+    }
+
+    elements.formNoHarian.value = item.noHarian || '';
+
+    showFormError_(
+      error?.message ||
+      'Gagal menghitung ulang No. Harian untuk tanggal yang dipilih.'
     );
   }
 }
@@ -1362,6 +1464,7 @@ async function openEditForm_(sourceItem) {
 function resetFormFields_() {
   elements.form.reset();
   state.createPreviewToken += 1;
+  state.editPreviewToken += 1;
   elements.formNo.value = '';
   elements.formNoHarian.value = '';
   ensureStatusOption_('');
