@@ -1155,6 +1155,24 @@ async function updateCreateContextFromDate_() {
 }
 
 
+function todayInputJakarta_() {
+  const parts = new Intl.DateTimeFormat(
+    'en-CA',
+    {
+      timeZone: 'Asia/Jakarta',
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit'
+    }
+  ).formatToParts(new Date());
+
+  const pick = type =>
+    String(parts.find(part => part.type === type)?.value || '');
+
+  return `${pick('year')}-${pick('month')}-${pick('day')}`;
+}
+
+
 function openCreateForm_() {
   if (!canWrite_() || !state.permissions.create) {
     showToast_('Akun ini tidak memiliki akses tambah.', 'error');
@@ -1170,6 +1188,10 @@ function openCreateForm_() {
 
   resetFormFields_();
 
+  // Isi tanggal hari ini otomatis, lalu ambil preview No/No.Harian dari D1.
+  // Request berjalan non-blocking supaya modal langsung terbuka.
+  elements.formTanggal.value = todayInputJakarta_();
+
   elements.formModalKicker.textContent = 'Akses ERM';
   elements.formModalTitle.textContent = 'Tambah Rujukan';
   elements.formPeriodLabel.textContent =
@@ -1184,7 +1206,61 @@ function openCreateForm_() {
   elements.formModal.hidden = false;
   document.body.style.overflow = 'hidden';
 
-  elements.formTanggal.focus();
+  // D1 menghitung preview dengan cepat; backend tetap menghitung ulang saat Simpan.
+  updateCreateContextFromDate_();
+
+  elements.formNama.focus();
+}
+
+
+function hasPositiveSequenceNumber_(value) {
+  return /^\d+$/.test(String(value ?? '').trim())
+    && Number(value) > 0;
+}
+
+
+async function fillMissingEditNumbersFromD1_(item) {
+  const missingNo = !hasPositiveSequenceNumber_(item?.no);
+  const missingDaily = !hasPositiveSequenceNumber_(item?.noHarian);
+
+  if (!missingNo && !missingDaily) {
+    return;
+  }
+
+  const inputDate = displayDateToInput_(item?.tanggal);
+
+  if (!inputDate) {
+    return;
+  }
+
+  try {
+    const params = new URLSearchParams({
+      period: String(item?.period || '').trim(),
+      tanggal: inputDate,
+      row: String(item?.row || '')
+    });
+
+    const payload = await apiFetch_(
+      '/filters?' + params.toString()
+    );
+
+    const preview = payload.data || {};
+
+    if (missingNo && preview.nextNo) {
+      elements.formNo.value = String(preview.nextNo);
+    }
+
+    if (missingDaily && preview.nextNoHarian) {
+      elements.formNoHarian.value = String(preview.nextNoHarian);
+    }
+
+  } catch (error) {
+    // Edit tetap boleh dibuka. Backend GAS akan menghitung ulang saat Save.
+    console.warn(
+      'Preview nomor edit gagal:',
+      error?.message || error
+    );
+  }
 }
 
 
@@ -1229,6 +1305,11 @@ async function openEditForm_(sourceItem) {
     state.editingItem = item;
 
     fillFormFromItem_(item);
+
+    // Jika row manual Spreadsheet belum punya No / No.Harian,
+    // tampilkan preview sesuai posisi row-nya dari D1.
+    await fillMissingEditNumbersFromD1_(item);
+
     state.formSnapshot = collectFormData_();
 
     elements.formModalKicker.textContent = 'Edit ERM';
@@ -1444,9 +1525,22 @@ async function submitForm_(event) {
         data
       );
 
-      if (!Object.keys(changes).length) {
+      const needsNumberRepair =
+        !hasPositiveSequenceNumber_(state.editingItem?.no) ||
+        !hasPositiveSequenceNumber_(state.editingItem?.noHarian);
+
+      if (!Object.keys(changes).length && !needsNumberRepair) {
         showFormError_('Tidak ada perubahan yang perlu disimpan.');
         return;
+      }
+
+      /**
+       * Kalau user hanya ingin memperbaiki nomor yang kosong, tetap kirim
+       * request UPDATE. Backend akan mengisi C/D berdasarkan posisi row.
+       * Nama dikirim ulang dengan nilai sama hanya untuk memicu update aman.
+       */
+      if (!Object.keys(changes).length && needsNumberRepair) {
+        changes.nama = data.nama;
       }
 
       elements.formSubmit.textContent = 'Menyimpan...';
