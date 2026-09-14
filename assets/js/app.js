@@ -1227,35 +1227,59 @@ async function fillMissingEditNumbersFromD1_(item) {
     return;
   }
 
+  /**
+   * Jangan batal hanya karena tanggal pada row Spreadsheet kosong.
+   * Worker sekarang dapat mencari tanggal efektif dari row sebelumnya.
+   */
+  const params = new URLSearchParams({
+    period: String(item?.period || '').trim(),
+    row: String(item?.row || '')
+  });
+
   const inputDate = displayDateToInput_(item?.tanggal);
 
-  if (!inputDate) {
-    return;
+  if (inputDate) {
+    params.set('tanggal', inputDate);
+  }
+
+  // Beri indikator visual supaya user tahu preview sedang dihitung.
+  if (missingNo) {
+    elements.formNo.value = 'Menghitung...';
+  }
+
+  if (missingDaily) {
+    elements.formNoHarian.value = 'Menghitung...';
   }
 
   try {
-    const params = new URLSearchParams({
-      period: String(item?.period || '').trim(),
-      tanggal: inputDate,
-      row: String(item?.row || '')
-    });
-
     const payload = await apiFetch_(
       '/filters?' + params.toString()
     );
 
     const preview = payload.data || {};
 
-    if (missingNo && preview.nextNo) {
-      elements.formNo.value = String(preview.nextNo);
+    if (missingNo) {
+      elements.formNo.value = preview.nextNo
+        ? String(preview.nextNo)
+        : '';
     }
 
-    if (missingDaily && preview.nextNoHarian) {
-      elements.formNoHarian.value = String(preview.nextNoHarian);
+    if (missingDaily) {
+      elements.formNoHarian.value = preview.nextNoHarian
+        ? String(preview.nextNoHarian)
+        : '';
     }
 
   } catch (error) {
-    // Edit tetap boleh dibuka. Backend GAS akan menghitung ulang saat Save.
+    if (missingNo) {
+      elements.formNo.value = '';
+    }
+
+    if (missingDaily) {
+      elements.formNoHarian.value = '';
+    }
+
+    // Edit tetap boleh dibuka. Backend GAS menghitung ulang saat Save.
     console.warn(
       'Preview nomor edit gagal:',
       error?.message || error
