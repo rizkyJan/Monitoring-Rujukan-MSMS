@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <title>Analisis Rujukan - Mitra Sehat</title>
+  <link rel="stylesheet" href="assets/css/analisis.css?v=20260917-2">
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand-wrap">
+      <div class="brand-icon">MR</div>
+      <div>
+        <h1>Analisis Rujukan</h1>
+        <p>Monitoring Rujukan Mitra Sehat</p>
+      </div>
+    </div>
+    <div class="top-actions">
+      <div class="identity" id="identityBox" hidden>
+        <strong id="identityRole">-</strong>
+        <span id="identityEmail">-</span>
+      </div>
+      <a class="btn btn-light" href="/">← Monitoring</a>
+    </div>
+  </header>
+
+  <main class="page">
+    <section class="panel intro-panel">
+      <div>
+        <span class="eyebrow">ANALISIS PER BULAN</span>
+        <h2>Diagnosa Rujukan</h2>
+        <p>
+          Diagnosa diambil <strong>sesuai DX yang tercatat</strong> pada data rujukan.
+          Urutan diagnosis otomatis dari jumlah rujukan terbanyak ke paling sedikit.
+        </p>
+      </div>
+      <div class="source-pill">Sumber: D1 tersinkron Spreadsheet</div>
+    </section>
+
+    <section class="panel filter-panel">
+      <div class="filter-grid">
+        <label class="field">
+          <span>Periode</span>
+          <select id="periodSelect">
+            <option value="">Memuat periode...</option>
+          </select>
+        </label>
+
+        <label class="field">
+          <span>Status Rujukan</span>
+          <select id="statusSelect">
+            <option value="">Semua</option>
+            <option value="BARU">Baru</option>
+            <option value="KONTROL">Kontrol</option>
+          </select>
+        </label>
+
+        <label class="field">
+          <span>RS Tujuan <small>(opsional)</small></span>
+          <select id="rsSelect" disabled>
+            <option value="">Semua Rumah Sakit</option>
+          </select>
+        </label>
+
+        <label class="field field-wide">
+          <span>Diagnosa</span>
+          <select id="dxSelect" disabled>
+            <option value="">Semua diagnosa — tampilkan ranking</option>
+          </select>
+          <small class="hint">Nomor 1 = diagnosa dengan rujukan terbanyak pada periode/filter yang dipilih.</small>
+        </label>
+
+        <div class="filter-actions">
+          <button id="resetBtn" class="btn btn-light" type="button">Reset Filter</button>
+        </div>
+      </div>
+    </section>
+
+    <div id="message" class="message" hidden></div>
+
+    <section class="cards" id="summaryCards" aria-live="polite">
+      <article class="card">
+        <span>Total Rujukan</span>
+        <strong id="totalRujukan">-</strong>
+        <small>Seluruh rujukan pada bulan terpilih</small>
+      </article>
+      <article class="card">
+        <span>Dengan DX</span>
+        <strong id="totalDx">-</strong>
+        <small>Rujukan yang memiliki diagnosa</small>
+      </article>
+      <article class="card">
+        <span>Jenis Diagnosa</span>
+        <strong id="jumlahDx">-</strong>
+        <small>DX unik pada filter saat ini</small>
+      </article>
+      <article class="card accent-card">
+        <span>Diagnosa Terbanyak</span>
+        <strong id="topDxCount">-</strong>
+        <small id="topDxName">Belum ada data</small>
+      </article>
+    </section>
+
+    <section class="analysis-grid">
+      <article class="panel chart-panel">
+        <div class="section-title">
+          <div>
+            <span class="eyebrow">TOP DIAGNOSA</span>
+            <h2>Rujukan Terbanyak</h2>
+          </div>
+          <span class="muted" id="chartPeriod"></span>
+        </div>
+        <div id="diagnosisChart" class="bar-chart">
+          <div class="empty">Pilih periode untuk menampilkan diagram.</div>
+        </div>
+      </article>
+
+      <article class="panel rs-panel">
+        <div class="section-title">
+          <div>
+            <span class="eyebrow">RUMAH SAKIT</span>
+            <h2>RS Tujuan Periode</h2>
+          </div>
+        </div>
+        <div id="rsRanking" class="compact-list">
+          <div class="empty">Belum ada data.</div>
+        </div>
+      </article>
+    </section>
+
+    <section class="panel ranking-panel">
+      <div class="section-title">
+        <div>
+          <span class="eyebrow">RANKING LENGKAP</span>
+          <h2>Diagnosa dari Terbanyak ke Paling Sedikit</h2>
+        </div>
+        <span class="muted" id="rankingInfo"></span>
+      </div>
+
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th class="rank-col">No.</th>
+              <th>Diagnosa / DX</th>
+              <th class="num-col">Jumlah Rujukan</th>
+              <th>RS Tujuan Terbanyak</th>
+              <th class="num-col">Jumlah di RS</th>
+              <th class="action-col">Aksi</th>
+            </tr>
+          </thead>
+          <tbody id="rankingBody">
+            <tr><td colspan="6" class="empty-cell">Memuat data...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="selectedSection" class="panel selected-panel" hidden>
+      <div class="section-title selected-heading">
+        <div>
+          <span class="eyebrow">DIAGNOSA TERPILIH</span>
+          <h2 id="selectedDxTitle">-</h2>
+          <p id="selectedDxMeta" class="muted"></p>
+        </div>
+        <button id="clearDxBtn" class="btn btn-light" type="button">Lihat Semua Diagnosa</button>
+      </div>
+
+      <div class="selected-grid">
+        <div class="selected-count">
+          <span>Jumlah Rujukan</span>
+          <strong id="selectedCount">0</strong>
+          <small id="selectedRsFilterText">Semua RS</small>
+        </div>
+        <div>
+          <h3>Distribusi RS Tujuan</h3>
+          <div id="selectedRsDistribution" class="compact-list"></div>
+        </div>
+      </div>
+
+      <div class="detail-head">
+        <h3>Data Rujukan Diagnosa Ini</h3>
+        <span id="detailInfo" class="muted"></span>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Tanggal</th>
+              <th>Nama</th>
+              <th>BPJS</th>
+              <th>Dokter</th>
+              <th>Status</th>
+              <th>RS Tujuan</th>
+              <th>Poli</th>
+            </tr>
+          </thead>
+          <tbody id="detailBody"></tbody>
+        </table>
+      </div>
+      <div class="pagination" id="detailPagination" hidden>
+        <button id="prevPageBtn" class="btn btn-light" type="button">← Sebelumnya</button>
+        <span id="pageInfo"></span>
+        <button id="nextPageBtn" class="btn btn-light" type="button">Berikutnya →</button>
+      </div>
+    </section>
+  </main>
+
+  <div id="loadingOverlay" class="loading-overlay" hidden>
+    <div class="loading-card">
+      <div class="spinner"></div>
+      <strong>Memuat analisis...</strong>
+    </div>
+  </div>
+
+  <script src="assets/js/analisis.js?v=20260917-2" defer></script>
+</body>
+</html>
