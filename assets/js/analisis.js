@@ -5,6 +5,7 @@
   const state = {
     periods: [],
     period: '',
+    status: '',
     dokter: '',
     rs: '',
     dx: '',
@@ -15,6 +16,7 @@
 
   const els = {
     period: $('periodSelect'),
+    status: $('statusSelect'),
     dokter: $('dokterSelect'),
     rs: $('rsSelect'),
     dx: $('dxSelect'),
@@ -144,6 +146,10 @@
         : state.periods[0];
 
     els.period.value = state.period;
+
+    const queryStatus = String(new URLSearchParams(location.search).get('status') || '').toUpperCase();
+    state.status = ['BARU', 'KONTROL'].includes(queryStatus) ? queryStatus : '';
+    if (els.status) els.status.value = state.status;
   }
 
   function buildAnalysisUrl() {
@@ -151,6 +157,7 @@
     params.set('period', state.period);
     params.set('page', String(state.page));
     params.set('limit', String(state.limit));
+    if (state.status) params.set('status', state.status);
     if (state.dokter) params.set('dokter', state.dokter);
     if (state.rs) params.set('rs', state.rs);
     if (state.dx) params.set('dx', state.dx);
@@ -183,7 +190,9 @@
   }
 
   function renderDokterOptions() {
-    const items = Array.isArray(state.data?.dokterOptions) ? state.data.dokterOptions : [];
+    const items = Array.isArray(state.data?.doctorOptions)
+      ? state.data.doctorOptions
+      : [];
     const current = state.dokter;
 
     els.dokter.innerHTML = '<option value="">Semua Dokter</option>' + items.map(item =>
@@ -191,9 +200,12 @@
     ).join('');
 
     els.dokter.disabled = false;
-    if (items.some(item => item.dokter === current)) {
-      els.dokter.value = current;
-    } else {
+
+    if (current && items.some(item => item.dokter.toUpperCase() === current.toUpperCase())) {
+      const found = items.find(item => item.dokter.toUpperCase() === current.toUpperCase());
+      state.dokter = found?.dokter || current;
+      els.dokter.value = state.dokter;
+    } else if (state.dokter) {
       state.dokter = '';
       els.dokter.value = '';
     }
@@ -244,7 +256,11 @@
     els.jumlahDx.textContent = fmt(summary.jumlahDiagnosa);
     els.topDxCount.textContent = top ? fmt(top.count) : '0';
     els.topDxName.textContent = top?.dx || 'Belum ada diagnosa';
-    els.chartPeriod.textContent = state.rs ? `${state.period} · ${state.rs}` : state.period;
+    const parts = [state.period];
+    if (state.status) parts.push(state.status === 'BARU' ? 'Rujukan Baru' : 'Rujukan Kontrol');
+    if (state.dokter) parts.push(`Dokter: ${state.dokter}`);
+    if (state.rs) parts.push(state.rs);
+    els.chartPeriod.textContent = parts.join(' · ');
   }
 
   function renderChart() {
@@ -283,7 +299,7 @@
 
   function renderRanking() {
     const items = state.data?.diagnoses || [];
-    els.rankingInfo.textContent = `${fmt(items.length)} diagnosa · ${state.period}`;
+    els.rankingInfo.textContent = `${fmt(items.length)} diagnosa · ${state.period}${state.status ? ` · ${state.status}` : ' · SEMUA STATUS'}`;
 
     if (!items.length) {
       els.rankingBody.innerHTML = '<tr><td colspan="6" class="empty-cell">Tidak ada diagnosa pada filter ini.</td></tr>';
@@ -310,7 +326,7 @@
 
     els.selectedSection.hidden = false;
     els.selectedDxTitle.textContent = selected.dx || state.dx;
-    els.selectedDxMeta.textContent = `${state.period}${state.rs ? ` · RS: ${state.rs}` : ' · Semua RS'}`;
+    els.selectedDxMeta.textContent = `${state.period} · ${state.status || 'SEMUA STATUS'}${state.dokter ? ` · Dokter: ${state.dokter}` : ' · Semua Dokter'}${state.rs ? ` · RS: ${state.rs}` : ' · Semua RS'}`;
     els.selectedCount.textContent = fmt(selected.total);
     els.selectedRsFilterText.textContent = state.rs || 'Semua RS';
 
@@ -357,12 +373,25 @@
     await loadAnalysis({ preserveDx: false });
   });
 
-  els.dokter.addEventListener('change', async () => {
-    state.dokter = els.dokter.value;
+  els.status.addEventListener('change', async () => {
+    state.status = els.status.value;
     state.dokter = '';
     state.rs = '';
     state.dx = '';
     state.page = 1;
+    els.dokter.value = '';
+    els.rs.value = '';
+    els.dx.value = '';
+    await loadAnalysis({ preserveDx: false });
+  });
+
+  els.dokter.addEventListener('change', async () => {
+    state.dokter = els.dokter.value;
+    state.rs = '';
+    state.dx = '';
+    state.page = 1;
+    els.rs.value = '';
+    els.dx.value = '';
     await loadAnalysis({ preserveDx: false });
   });
 
@@ -400,10 +429,12 @@
   });
 
   els.reset.addEventListener('click', async () => {
+    state.status = '';
     state.dokter = '';
     state.rs = '';
     state.dx = '';
     state.page = 1;
+    els.status.value = '';
     els.dokter.value = '';
     els.rs.value = '';
     els.dx.value = '';
