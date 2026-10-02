@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="color-scheme" content="light">
   <title>Analisis Rujukan - Mitra Sehat</title>
-  <link rel="stylesheet" href="assets/css/analisis.css?v=20260917-3">
+  <link rel="stylesheet" href="assets/css/analisis.css?v=20260916-1">
 </head>
 <body>
   <header class="topbar">
@@ -48,11 +48,9 @@
         </label>
 
         <label class="field">
-          <span>Status Rujukan</span>
-          <select id="statusSelect">
-            <option value="">Semua</option>
-            <option value="BARU">Baru</option>
-            <option value="KONTROL">Kontrol</option>
+          <span>Dokter <small>(opsional)</small></span>
+          <select id="dokterSelect" disabled>
+            <option value="">Semua Dokter</option>
           </select>
         </label>
 
@@ -214,6 +212,6 @@
     </div>
   </div>
 
-  <script src="assets/js/analisis.js?v=20260917-3" defer></script>
+  <script src="assets/js/analisis.js?v=20260916-1" defer></script>
 </body>
 </html>

@@ -5,7 +5,7 @@
   const state = {
     periods: [],
     period: '',
-    status: '',
+    dokter: '',
     rs: '',
     dx: '',
     page: 1,
@@ -15,7 +15,7 @@
 
   const els = {
     period: $('periodSelect'),
-    status: $('statusSelect'),
+    dokter: $('dokterSelect'),
     rs: $('rsSelect'),
     dx: $('dxSelect'),
     reset: $('resetBtn'),
@@ -144,10 +144,6 @@
         : state.periods[0];
 
     els.period.value = state.period;
-
-    const queryStatus = String(new URLSearchParams(location.search).get('status') || '').toUpperCase();
-    state.status = ['BARU', 'KONTROL'].includes(queryStatus) ? queryStatus : '';
-    if (els.status) els.status.value = state.status;
   }
 
   function buildAnalysisUrl() {
@@ -155,7 +151,7 @@
     params.set('period', state.period);
     params.set('page', String(state.page));
     params.set('limit', String(state.limit));
-    if (state.status) params.set('status', state.status);
+    if (state.dokter) params.set('dokter', state.dokter);
     if (state.rs) params.set('rs', state.rs);
     if (state.dx) params.set('dx', state.dx);
     return `/api/analysis?${params.toString()}`;
@@ -171,6 +167,7 @@
       const result = await api(buildAnalysisUrl());
       state.data = result.data || null;
 
+      renderDokterOptions();
       renderRsOptions();
       renderDiagnosisOptions(preserveDx);
       renderSummary();
@@ -182,6 +179,23 @@
       showMessage(error?.message || 'Gagal memuat analisis.');
     } finally {
       setLoading(false);
+    }
+  }
+
+  function renderDokterOptions() {
+    const items = Array.isArray(state.data?.dokterOptions) ? state.data.dokterOptions : [];
+    const current = state.dokter;
+
+    els.dokter.innerHTML = '<option value="">Semua Dokter</option>' + items.map(item =>
+      `<option value="${escapeHtml(item.dokter)}">${item.rank}. ${escapeHtml(item.dokter)} — ${fmt(item.count)} rujukan</option>`
+    ).join('');
+
+    els.dokter.disabled = false;
+    if (items.some(item => item.dokter === current)) {
+      els.dokter.value = current;
+    } else {
+      state.dokter = '';
+      els.dokter.value = '';
     }
   }
 
@@ -230,10 +244,7 @@
     els.jumlahDx.textContent = fmt(summary.jumlahDiagnosa);
     els.topDxCount.textContent = top ? fmt(top.count) : '0';
     els.topDxName.textContent = top?.dx || 'Belum ada diagnosa';
-    const parts = [state.period];
-    if (state.status) parts.push(state.status === 'BARU' ? 'Rujukan Baru' : 'Rujukan Kontrol');
-    if (state.rs) parts.push(state.rs);
-    els.chartPeriod.textContent = parts.join(' · ');
+    els.chartPeriod.textContent = state.rs ? `${state.period} · ${state.rs}` : state.period;
   }
 
   function renderChart() {
@@ -272,7 +283,7 @@
 
   function renderRanking() {
     const items = state.data?.diagnoses || [];
-    els.rankingInfo.textContent = `${fmt(items.length)} diagnosa · ${state.period}${state.status ? ` · ${state.status}` : ' · SEMUA STATUS'}`;
+    els.rankingInfo.textContent = `${fmt(items.length)} diagnosa · ${state.period}`;
 
     if (!items.length) {
       els.rankingBody.innerHTML = '<tr><td colspan="6" class="empty-cell">Tidak ada diagnosa pada filter ini.</td></tr>';
@@ -299,7 +310,7 @@
 
     els.selectedSection.hidden = false;
     els.selectedDxTitle.textContent = selected.dx || state.dx;
-    els.selectedDxMeta.textContent = `${state.period} · ${state.status || 'SEMUA STATUS'}${state.rs ? ` · RS: ${state.rs}` : ' · Semua RS'}`;
+    els.selectedDxMeta.textContent = `${state.period}${state.rs ? ` · RS: ${state.rs}` : ' · Semua RS'}`;
     els.selectedCount.textContent = fmt(selected.total);
     els.selectedRsFilterText.textContent = state.rs || 'Semua RS';
 
@@ -339,19 +350,19 @@
 
   els.period.addEventListener('change', async () => {
     state.period = els.period.value;
+    state.dokter = '';
     state.rs = '';
     state.dx = '';
     state.page = 1;
     await loadAnalysis({ preserveDx: false });
   });
 
-  els.status.addEventListener('change', async () => {
-    state.status = els.status.value;
+  els.dokter.addEventListener('change', async () => {
+    state.dokter = els.dokter.value;
+    state.dokter = '';
     state.rs = '';
     state.dx = '';
     state.page = 1;
-    els.rs.value = '';
-    els.dx.value = '';
     await loadAnalysis({ preserveDx: false });
   });
 
@@ -389,11 +400,11 @@
   });
 
   els.reset.addEventListener('click', async () => {
-    state.status = '';
+    state.dokter = '';
     state.rs = '';
     state.dx = '';
     state.page = 1;
-    els.status.value = '';
+    els.dokter.value = '';
     els.rs.value = '';
     els.dx.value = '';
     await loadAnalysis({ preserveDx: false });
